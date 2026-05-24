@@ -81,7 +81,7 @@ export function ManifestoInlineForm() {
             {t('inlineForm.successTitle', { name: form.firstName, defaultValue: `You're now on the wave, ${form.firstName}.` })}
           </p>
           <p className="text-sm text-[#0C0C0A]/70 font-mono">
-            {t('inlineForm.successBody', { defaultValue: 'Welcome to the movement. Check your inbox for a confirmation link to unlock sharing and your wave mark.' })}
+            {t('inlineForm.successBody', { defaultValue: 'Welcome to the movement. Check your inbox for confirmation, continue to join the movement or get the wave mark.' })}
           </p>
         </div>
       </div>
