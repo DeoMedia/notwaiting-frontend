@@ -68,7 +68,7 @@ export default function Root() {
         </ErrorBoundary>
       </main>
       <ScrollToTop />
-      <footer className="bg-[#027A4F] text-white py-16 px-6 overflow-hidden">
+      {/* <footer className="bg-[#027A4F] text-white py-16 px-6 overflow-hidden">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-4xl sm:text-6xl md:text-8xl font-custard normal-case tracking-tight mb-8">

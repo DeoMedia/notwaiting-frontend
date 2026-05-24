@@ -197,9 +197,6 @@ export default function Home() {
               </div>
               <HeroOverlay className={slide.overlay.className} align={slide.overlay.align} />
             </div>
-            */}
-            <img src={activeImages[0]?.mobile}  alt="#NotWaiting" className="md:hidden absolute inset-0 w-full h-full object-cover object-center" />
-            <img src={activeImages[0]?.desktop} alt="#NotWaiting" className="hidden md:block absolute inset-0 w-full h-full object-cover object-center" />
           </div>
         ))}
 
@@ -265,7 +262,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-      ── END MANIFESTO ── */}
 
       {/* ── Sign form ─── */}
       <ManifestoSignForm ref={signOnRef} onSuccess={handleSignSuccess} />
@@ -301,7 +297,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-      ── END WAVE MARK ── */}
 
       {/* ── Stats section ─── */}
       <StatsSection
@@ -334,8 +329,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-      ── END PROTOCOL STRIP ── */}
-
     </div>
   )
 }
