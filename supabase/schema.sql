@@ -40,7 +40,7 @@ create table if not exists public.stories (
 );
 
 -- ── Stats view ────────────────────────────────────────────────
-create or replace view public.coalition_stats as
+create or replace view public.movement_stats as
 select
   (select count(*) from public.signers)::int                                           as total_signers,
   (select count(distinct country) from public.signers)::int                            as total_countries,

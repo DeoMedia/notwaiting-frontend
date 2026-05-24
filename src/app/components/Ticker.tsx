@@ -11,6 +11,9 @@ export function Ticker({ items }: TickerProps) {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
 
+    // Respect accessibility preference — freeze the ticker for users with vestibular disorders
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
     let scrollPosition = 0;
     const scroll = () => {
       scrollPosition += 0.5;

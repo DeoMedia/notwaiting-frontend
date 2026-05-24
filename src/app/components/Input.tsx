@@ -2,20 +2,33 @@ import { InputHTMLAttributes } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  error?: string;
 }
 
-export function Input({ label, className = '', ...props }: InputProps) {
+export function Input({ label, error, className = '', id, name, ...props }: InputProps) {
+  const inputId = id ?? name
+  const borderClass = error ? 'border-[#dd3935]' : 'border-[#0C0C0A]'
+  const ringClass = error ? 'focus:ring-[#dd3935]' : 'focus:ring-[#dd3935]'
   return (
     <div className="w-full">
       {label && (
-        <label className="block mb-2 text-sm uppercase tracking-wide font-mono">
+        <label htmlFor={inputId} className="block mb-2 text-base font-bold uppercase tracking-wide font-mono">
           {label}
         </label>
       )}
       <input
-        className={`w-full px-4 py-3 bg-[#F5F5F5] border border-[#0C0C0A] focus:outline-none focus:ring-2 focus:ring-[#dd3935] ${className}`}
+        id={inputId}
+        name={name}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error && inputId ? `${inputId}-error` : undefined}
+        className={`w-full px-4 py-3 bg-[#F5F5F5] border ${borderClass} focus:outline-none focus:ring-2 ${ringClass} ${className}`}
         {...props}
       />
+      {error && (
+        <p id={inputId ? `${inputId}-error` : undefined} className="mt-1 text-xs font-mono text-[#dd3935]">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

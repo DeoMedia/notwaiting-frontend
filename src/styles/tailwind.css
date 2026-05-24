@@ -1,4 +1,20 @@
 @import 'tailwindcss' source(none);
 @source '../**/*.{js,ts,jsx,tsx}';
-
 @import 'tw-animate-css';
+
+/*
+ * @theme registers font-family utilities for Tailwind v4.
+ * This gives you font-custard, font-druk, font-mono, font-sans as Tailwind classes.
+ *
+ * Usage:
+ *   font-druk    → Druk Wide Bold   → all headings, CTAs, big statements
+ *   font-custard → Custard Regular  → #NotWaiting ONLY, always normal-case
+ *   font-mono    → Space Mono       → body copy, labels, captions, forms
+ *   font-sans    → Space Mono       → default fallback (same as font-mono)
+ */
+@theme {
+  --font-family-custard: 'Custard', 'Fraunces', 'Playfair Display', Georgia, serif;
+  --font-family-druk:    'Druk Wide Bold', 'Arial Black', 'Helvetica Neue', Impact, sans-serif;
+  --font-family-mono:    'Space Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --font-family-sans:    'Space Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}

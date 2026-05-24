@@ -1,5 +1,6 @@
 import { Copy } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { copyToClipboard } from '../utils/clipboard';
 
 interface ShareCardProps {
@@ -9,6 +10,7 @@ interface ShareCardProps {
 }
 
 export function ShareCard({ title, description, caption }: ShareCardProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -31,7 +33,7 @@ export function ShareCard({ title, description, caption }: ShareCardProps) {
         className="flex items-center justify-center gap-2 px-4 py-3 bg-[#0C0C0A] text-white hover:bg-[#000000] transition-colors"
       >
         <Copy size={16} />
-        {copied ? 'Copied!' : 'Copy'}
+        {copied ? t('common.copied') : t('common.copy')}
       </button>
     </div>
   );

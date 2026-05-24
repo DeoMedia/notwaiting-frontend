@@ -3,7 +3,7 @@ Replace your current HERO section with this slider version.
 It gives you:
 
 2 slides
-Both slides have Join the coalition →
+Both slides have Join the movement →
 Red / yellow / green campaign design
 Image-led layout like your references
 Manual dots + auto-slide
@@ -56,7 +56,7 @@ Then replace your hero with this:
             onClick={scrollToSignOn}
             className="mt-8 bg-[#DD3935] hover:bg-[#C92F2B] text-white text-lg px-10 py-6 rounded-none font-bold"
           >
-            Join the coalition →
+            Join the movement →
           </Button>
         </div>
       </div>
@@ -103,7 +103,7 @@ Then replace your hero with this:
             onClick={scrollToSignOn}
             className="mt-8 bg-[#DD3935] hover:bg-[#C92F2B] text-white text-lg px-10 py-6 rounded-none font-bold"
           >
-            Join the coalition →
+            Join the movement →
           </Button>
         </div>
       </div>
