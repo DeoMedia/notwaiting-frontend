@@ -88,13 +88,6 @@ export function Navigation() {
                 {link.label}
               </Link>
             ))}
-            <div className="flex items-center gap-4">
-              {socials.map((s) => (
-                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label} className="hover:text-[#EBBD06] transition-colors">
-                  {s.icon}
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Desktop Language Toggle */}
