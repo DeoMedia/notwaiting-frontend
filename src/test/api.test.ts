@@ -256,19 +256,22 @@ describe('trackAction', () => {
 describe('fetchDashboard', () => {
   beforeEach(() => mockFetch.mockClear())
 
-  it('GETs /api/dashboard with Bearer token', async () => {
+  it('GETs /api/dashboard with credentials:include (cookie auth)', async () => {
     mockFetch.mockReturnValue(mockOk({ stats: {}, waves: [], countries: [], recent: [], last7Days: {} }))
 
-    await fetchDashboard('my-secret')
+    await fetchDashboard()
 
-    const [_url, opts] = mockFetch.mock.calls[0]
-    expect(opts.headers['Authorization']).toBe('Bearer my-secret')
+    const [url, opts] = mockFetch.mock.calls[0]
+    expect(url).toContain('/api/dashboard')
+    // Cookies, not Authorization headers, carry the admin session now.
+    expect(opts.credentials).toBe('include')
+    expect(opts.headers?.Authorization).toBeUndefined()
   })
 
   it('throws when auth fails (401)', async () => {
     mockFetch.mockReturnValue(mockError(401, { error: 'Unauthorized' }))
 
-    await expect(fetchDashboard('wrong-password')).rejects.toThrow('Unauthorized')
+    await expect(fetchDashboard()).rejects.toThrow('Unauthorized')
   })
 })
 

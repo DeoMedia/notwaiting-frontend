@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generateCaption } from '../utils/api';
+import { LIMITS, validateAiAnswer } from '../utils/validation';
 
 interface Props {
   subject: string;   // passed from the form's existing "Who is this about?" field
@@ -8,20 +10,20 @@ interface Props {
   onCancel: () => void;
 }
 
-const QUESTIONS = [
-  {
-    question: 'What are you building, creating, or changing?',
-    hint: 'Be specific — one clear sentence is enough.',
-    placeholder: 'e.g. Building a fintech platform for smallholder farmers in West Africa',
-  },
-  {
-    question: "What's the impact or vision behind it?",
-    hint: 'Optional — what does success look like for you?',
-    placeholder: 'e.g. Making financial services accessible to 10M people across Africa',
-  },
-];
-
 export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Props) {
+  const { t } = useTranslation();
+  const questions = [
+    {
+      question: t('aiQuestionnaire.q1'),
+      hint: t('aiQuestionnaire.q1Hint'),
+      placeholder: t('aiQuestionnaire.q1Placeholder'),
+    },
+    {
+      question: t('aiQuestionnaire.q2'),
+      hint: t('aiQuestionnaire.q2Hint'),
+      placeholder: t('aiQuestionnaire.q2Placeholder'),
+    },
+  ];
   const [step, setStep] = useState(0);
   const [doing, setDoing] = useState('');
   const [impact, setImpact] = useState('');
@@ -30,6 +32,7 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState('');
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -47,6 +50,18 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
   };
 
   const handleGenerate = async () => {
+    const doingErr = validateAiAnswer(doing, true, t);
+    if (doingErr) {
+      setFieldError(doingErr);
+      transition(0);
+      return;
+    }
+    const impactErr = validateAiAnswer(impact, false, t);
+    if (impactErr) {
+      setFieldError(impactErr);
+      return;
+    }
+    setFieldError('');
     setLoading(true);
     setError('');
     try {
@@ -58,7 +73,7 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
       });
       setGenerated(result.caption);
     } catch (e: any) {
-      setError(e.message || 'Something went wrong. Please try again.');
+      setError(e.message || t('aiQuestionnaire.genericError'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +84,7 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
     return (
       <div className="border-2 border-[#DD3935]/30 bg-white flex flex-col items-center justify-center gap-3 py-12">
         <div className="w-5 h-5 border-2 border-[#DD3935] border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-mono uppercase tracking-widest text-[#DD3935]">Crafting your story…</p>
+        <p className="text-xs font-mono uppercase tracking-widest text-[#DD3935]">{t('aiQuestionnaire.crafting')}</p>
       </div>
     );
   }
@@ -80,9 +95,9 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
       <div className="border-2 border-[#DD3935] bg-white" style={{ animation: 'fadeSlideIn 0.35s ease forwards' }}>
         <style>{`@keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
         <div className="px-5 pt-4 pb-2 border-b border-[#f0f0f0] flex items-center justify-between">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-[#DD3935] font-bold">AI Generated Story</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-[#DD3935] font-bold">{t('aiQuestionnaire.aiGenerated')}</span>
           <button onClick={() => setGenerated('')} className="text-[10px] font-mono uppercase text-gray-400 hover:text-gray-600 transition-colors">
-            ← Edit answers
+            {t('aiQuestionnaire.editAnswers')}
           </button>
         </div>
         <div className="p-5">
@@ -92,19 +107,19 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
               onClick={() => onComplete(generated)}
               className="px-4 py-2 bg-[#DD3935] text-white text-xs font-mono uppercase tracking-wide hover:bg-[#C92F2B] transition-colors"
             >
-              Use this story →
+              {t('aiQuestionnaire.useStory')}
             </button>
             <button
               onClick={handleGenerate}
               className="px-4 py-2 border-2 border-[#0C0C0A] text-xs font-mono uppercase tracking-wide hover:bg-[#f5f5f5] transition-colors"
             >
-              Regenerate
+              {t('aiQuestionnaire.regenerate')}
             </button>
             <button
               onClick={onCancel}
               className="px-4 py-2 text-xs font-mono uppercase tracking-wide text-gray-400 hover:text-gray-600 transition-colors"
             >
-              Write myself
+              {t('aiQuestionnaire.writeMyself')}
             </button>
           </div>
           {error && <p className="text-[#DD3935] text-xs mt-3 font-mono">{error}</p>}
@@ -140,40 +155,56 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
               />
             ))}
             <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest ml-2">
-              {step + 1} of 2
+              {t('aiQuestionnaire.stepOf', { current: step + 1, total: 2 })}
             </span>
           </div>
           <button
             onClick={onCancel}
             className="text-[10px] font-mono uppercase tracking-wide text-gray-400 hover:text-gray-600 transition-colors"
           >
-            Write myself ×
+            {t('aiQuestionnaire.writeMyselfClose')}
           </button>
         </div>
 
         {/* Animated card */}
         <div style={slideStyle}>
-          <p className="text-sm font-black uppercase tracking-tight mb-0.5">{QUESTIONS[step].question}</p>
-          <p className="text-[11px] text-gray-400 font-mono mb-3">{QUESTIONS[step].hint}</p>
+          <p className="text-sm font-black uppercase tracking-tight mb-0.5">{questions[step].question}</p>
+          <p className="text-[11px] text-gray-400 font-mono mb-3">{questions[step].hint}</p>
 
           <textarea
             ref={textareaRef}
             rows={4}
-            maxLength={120}
+            maxLength={LIMITS.aiQuestion}
             value={step === 0 ? doing : impact}
-            onChange={(e) => step === 0 ? setDoing(e.target.value) : setImpact(e.target.value)}
-            placeholder={QUESTIONS[step].placeholder}
-            className="w-full border-2 border-[#0C0C0A] focus:border-[#DD3935] outline-none p-3 resize-none text-sm font-mono bg-[#f9f9f9] focus:bg-white transition-colors"
+            onChange={(e) => {
+              if (step === 0) setDoing(e.target.value);
+              else setImpact(e.target.value);
+              if (fieldError) setFieldError('');
+            }}
+            placeholder={questions[step].placeholder}
+            aria-invalid={fieldError ? true : undefined}
+            className={`w-full border-2 outline-none p-3 resize-none text-sm font-mono bg-[#f9f9f9] focus:bg-white transition-colors ${
+              fieldError ? 'border-[#DD3935] focus:border-[#DD3935]' : 'border-[#0C0C0A] focus:border-[#DD3935]'
+            }`}
             onKeyDown={(e) => {
               if (e.key !== 'Enter' || e.shiftKey) return;
               e.preventDefault();
-              if (step === 0 && doing.trim()) transition(1);
-              else if (step === 1) handleGenerate();
+              if (step === 0) {
+                const err = validateAiAnswer(doing, true, t);
+                if (err) { setFieldError(err); return; }
+                setFieldError('');
+                transition(1);
+              } else if (step === 1) {
+                handleGenerate();
+              }
             }}
           />
           <p className="text-[10px] text-gray-400 text-right mt-1 font-mono">
-            {(step === 0 ? doing : impact).length}/120{step === 1 ? ' · optional' : ''}
+            {(step === 0 ? doing : impact).length}/{LIMITS.aiQuestion}{step === 1 ? t('aiQuestionnaire.optionalSuffix') : ''}
           </p>
+          {fieldError && (
+            <p className="text-[10px] text-[#DD3935] mt-1 font-mono">{fieldError}</p>
+          )}
         </div>
 
         {/* Navigation */}
@@ -182,16 +213,21 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
             onClick={() => transition(0)}
             className={`text-xs font-mono uppercase tracking-wide text-gray-400 hover:text-gray-700 transition-all ${step === 0 ? 'invisible' : ''}`}
           >
-            ← Back
+            {t('common.back')}
           </button>
 
           {step === 0 ? (
             <button
-              onClick={() => transition(1)}
+              onClick={() => {
+                const err = validateAiAnswer(doing, true, t);
+                if (err) { setFieldError(err); return; }
+                setFieldError('');
+                transition(1);
+              }}
               disabled={!doing.trim()}
               className="px-5 py-2 bg-[#0C0C0A] text-white text-xs font-mono uppercase tracking-wide hover:bg-[#DD3935] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
-              Next →
+              {t('common.next')}
             </button>
           ) : (
             <button
@@ -201,7 +237,7 @@ export function AiStoryQuestionnaire({ subject, wave, onComplete, onCancel }: Pr
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
-              Generate story
+              {t('aiQuestionnaire.generateStory')}
             </button>
           )}
         </div>

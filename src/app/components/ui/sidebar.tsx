@@ -83,7 +83,12 @@ function SidebarProvider({
       }
 
       // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      // SameSite=Lax blocks cross-site POST navigations from sending it,
+      // and Secure keeps it off the wire on http://. The cookie only carries
+      // a UI bool today; locking the flags down now means a later refactor
+      // that reuses the name can't silently weaken the defaults.
+      const cookieFlags = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; SameSite=Lax${cookieFlags}`;
     },
     [setOpenProp, open],
   );

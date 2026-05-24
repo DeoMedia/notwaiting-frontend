@@ -1,18 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { fetchStories, type Story } from '../utils/api'
 import { SECTOR_MAP } from '../constants/sectors'
 import { useNavigate } from 'react-router'
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const days = Math.floor(diff / 86400000)
-  if (days === 0) return 'today'
-  if (days === 1) return 'yesterday'
-  return `${days}d ago`
+function useTimeAgo() {
+  const { t } = useTranslation()
+  return (dateStr: string): string => {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const days = Math.floor(diff / 86400000)
+    if (days === 0) return t('storiesSlider.today')
+    if (days === 1) return t('storiesSlider.yesterday')
+    return t('storiesSlider.daysAgoShort', { n: days })
+  }
 }
 
 function SliderCard({ story }: { story: Story }) {
-  const sector = SECTOR_MAP[story.wave_tag] ?? { color: '#18027a', text: '#fff', label: story.wave_tag }
+  const { t } = useTranslation()
+  const timeAgo = useTimeAgo()
+  const base = SECTOR_MAP[story.wave_tag] ?? { color: '#18027a', text: '#fff', label: story.wave_tag, value: story.wave_tag }
+  const sector = { ...base, label: t(`sectors.${story.wave_tag}`, { defaultValue: base.label }) }
 
   return (
     <div className="bg-white border-2 border-[#0C0C0A] p-6 md:p-8 flex flex-col min-h-[280px] hover:border-[#DD3935] transition-colors duration-200 cursor-default">
@@ -47,6 +54,7 @@ const VISIBLE = 3
 const AUTO_INTERVAL = 5000
 
 export function StoriesSlider() {
+  const { t } = useTranslation()
   const [stories, setStories] = useState<Story[]>([])
   const [current, setCurrent] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -93,17 +101,17 @@ export function StoriesSlider() {
         <div className="flex items-end justify-between mb-12">
           <div>
             <p className="font-mono text-xs uppercase text-[#DD3935] font-black mb-3 tracking-widest">
-              Live from the movement
+              {t('storiesSlider.kicker')}
             </p>
             <h2 className="text-3xl md:text-5xl font-black uppercase text-[#0C0C0A] tracking-tight leading-none">
-              Waves from<br />the community
+              {t('storiesSlider.headingLine1')}<br />{t('storiesSlider.headingLine2')}
             </h2>
           </div>
           <button
             onClick={() => navigate('/stories')}
             className="hidden md:inline-flex items-center gap-2 text-sm font-black uppercase text-[#DD3935] border-b-2 border-[#DD3935] pb-1 hover:text-[#0C0C0A] hover:border-[#0C0C0A] transition-colors"
           >
-            View all stories →
+            {t('storiesSlider.viewAll')}
           </button>
         </div>
 
@@ -131,7 +139,7 @@ export function StoriesSlider() {
                     ? 'w-6 bg-[#DD3935]'
                     : 'w-1.5 bg-[#0C0C0A]/20 hover:bg-[#0C0C0A]/40'
                 }`}
-                aria-label={`Go to story ${i + 1}`}
+                aria-label={t('storiesSlider.goToAria', { n: i + 1 })}
               />
             ))}
           </div>
@@ -141,14 +149,14 @@ export function StoriesSlider() {
             <button
               onClick={prev}
               className="w-10 h-10 border-2 border-[#0C0C0A]/30 text-[#0C0C0A]/60 hover:border-[#DD3935] hover:text-[#DD3935] transition-colors flex items-center justify-center text-base font-black"
-              aria-label="Previous story"
+              aria-label={t('storiesSlider.prevAria')}
             >
               ←
             </button>
             <button
               onClick={next}
               className="w-10 h-10 border-2 border-[#0C0C0A]/30 text-[#0C0C0A]/60 hover:border-[#DD3935] hover:text-[#DD3935] transition-colors flex items-center justify-center text-base font-black"
-              aria-label="Next story"
+              aria-label={t('storiesSlider.nextAria')}
             >
               →
             </button>
@@ -161,7 +169,7 @@ export function StoriesSlider() {
             onClick={() => navigate('/stories')}
             className="text-sm font-black uppercase text-[#DD3935] border-b-2 border-[#DD3935] pb-0.5"
           >
-            View all stories →
+            {t('storiesSlider.viewAll')}
           </button>
         </div>
 

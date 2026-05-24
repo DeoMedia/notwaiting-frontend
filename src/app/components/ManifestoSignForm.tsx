@@ -1,55 +1,61 @@
 import { useState, forwardRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Input } from './Input';
-import { Select } from './Select';
 import { Textarea } from './Textarea';
-import { signManifesto, publishStory, trackAction } from '../utils/api';
-import { AFRICAN_COUNTRIES_WITH_PLACEHOLDER } from '../constants/countries';
+import { signManifesto, publishStory, trackAction, getStoredSignerId } from '../utils/api';
+import { Honeypot } from './Honeypot';
+import { Captcha, isCaptchaEnabled } from './Captcha';
 import waveImage from '../../imports/waves.png';
 import { AiStoryQuestionnaire } from './AiStoryQuestionnaire';
+import { useLocalizedCountriesWithPlaceholder, useLocalizedSectors } from '../i18n/hooks';
+import {
+  LIMITS,
+  validateManifesto,
+  firstError,
+  type ManifestoField,
+  type ValidationErrors,
+} from '../utils/validation';
 
 interface Props {
   onSuccess: (signerId: string, firstName: string) => void
 }
 
-const WAVE_OPTIONS = [
-  { value: '',            label: 'Select your sector' },
-  { value: 'fintech',     label: 'Fintech' },
-  { value: 'agriculture', label: 'Agriculture' },
-  { value: 'music',       label: 'Music' },
-  { value: 'health',      label: 'Health' },
-  { value: 'tech',        label: 'Tech' },
-  { value: 'education',   label: 'Education' },
-  { value: 'climate',     label: 'Climate' },
-  { value: 'media',       label: 'Media' },
-  { value: 'fashion',     label: 'Fashion' },
-  { value: 'sports',      label: 'Sports' },
-  { value: 'film',        label: 'Film' },
-  { value: 'policy',      label: 'Policy' },
-  { value: 'other',       label: 'Other' },
-]
+type ShareIntent = 'wall' | 'twitter' | 'linkedin' | 'facebook' | 'instagram'
 
 export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
   ({ onSuccess }, ref) => {
     const navigate = useNavigate()
+    const { t } = useTranslation()
+    const countryOptions = useLocalizedCountriesWithPlaceholder()
+    const sectors = useLocalizedSectors()
+    const waveOptions = [
+      { value: '', label: t('signForm.sectorPlaceholder') },
+      ...sectors.map(s => ({ value: s.value, label: s.label })),
+    ]
     const [formData, setFormData] = useState({
-      firstName: '', country: '', wave: '', waveOther: '', subject: 'me', story: '',
+      firstName: '', country: '', email: '', wave: '', waveOther: '', subject: 'me', story: '',
     })
     const [loading, setLoading]         = useState(false)
+    const [activeIntent, setActiveIntent] = useState<ShareIntent | null>(null)
+    const [showShareOptions, setShowShareOptions] = useState(false)
     const [error, setError]             = useState('')
+    const [fieldErrors, setFieldErrors] = useState<ValidationErrors<ManifestoField>>({})
     const [submitted, setSubmitted]     = useState(false)
     const [isLeaving, setIsLeaving]     = useState(false)
     const [successVisible, setSuccessVisible] = useState(false)
     const [signerId, setSignerId]       = useState<string | null>(null)
     const [showAiHelper, setShowAiHelper] = useState(false)
+    const [honeypot, setHoneypot]       = useState('')
+    const [captchaToken, setCaptchaToken] = useState('')
 
     // Clear stale story-empty error as soon as the story field has content
     useEffect(() => {
-      if (formData.story.trim() && error === 'Please write your story before publishing.') {
-        setError('')
+      if (formData.story.trim()) {
+        if (error === t('validation.storyRequired')) setError('')
       }
-    }, [formData.story])
+    }, [formData.story, error, t])
 
     // Scrolls to the section top and triggers the slide-in transition
     useEffect(() => {
@@ -60,7 +66,7 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     }, [submitted])
 
     const getManualShareText = () => {
-      const story = formData.story.trim() || 'I just joined #NotWaiting — the movement for African builders, creators, and innovators. Africa is on a wave.'
+      const story = formData.story.trim() || t('signForm.manualShareText')
       return `${story}\n\n#NotWaiting`
     }
 
@@ -69,42 +75,156 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       await trackAction({ signerId, action: 'shared_social', metadata: { platform, source: 'manual_manifesto' } })
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault()
+    const runValidation = () => {
+      const result = validateManifesto(formData, { requireWave: true, requireStory: true }, t)
+      setFieldErrors(result.errors)
+      if (!result.valid) {
+        setError(firstError(result.errors) ?? t('signForm.pleaseComplete'))
+      } else {
+        setError('')
+      }
+      return result.valid
+    }
+
+    const updateField = <K extends keyof typeof formData>(key: K, value: typeof formData[K]) => {
+      setFormData(prev => ({ ...prev, [key]: value }))
+      if (fieldErrors[key as ManifestoField]) {
+        setFieldErrors(prev => ({ ...prev, [key]: undefined }))
+      }
+    }
+
+    const openSocialShare = async (platform: Exclude<ShareIntent, 'wall'>, signerIdForTracking: string) => {
+      const shareText = getManualShareText()
+      const url = window.location.origin
+      switch (platform) {
+        case 'twitter':
+          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer')
+          break
+        case 'linkedin':
+          window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
+          navigator.clipboard.writeText(shareText).catch(() => {})
+          setError(t('signForm.storyCopiedLinkedIn'))
+          break
+        case 'facebook':
+          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
+          navigator.clipboard.writeText(shareText).catch(() => {})
+          setError(t('signForm.storyCopiedFacebook'))
+          break
+        case 'instagram':
+          navigator.clipboard.writeText(shareText).catch(() => {})
+          setError(t('signForm.storyCopiedInstagram'))
+          break
+      }
+      await trackAction({ signerId: signerIdForTracking, action: 'shared_social', metadata: { platform, source: 'manual_manifesto' } })
+    }
+
+    const handleShare = async (intent: ShareIntent) => {
       setError('')
 
-      if (!formData.story.trim()) {
-        setError('Please write your story before publishing.')
+      if (!runValidation()) return
+
+      const existingSignerId = getStoredSignerId()
+      // Captcha required only when we'll hit /api/manifesto. A returning
+      // signer (already-claimed session in this tab) skips the captcha
+      // because we go straight to publishStory under their cookie.
+      if (isCaptchaEnabled() && !existingSignerId && !captchaToken) {
+        setError(t('signForm.captchaRequired') ?? 'Please complete the captcha challenge.')
         return
       }
 
       const effectiveWave = formData.wave === 'other'
         ? formData.waveOther.trim() || 'other'
         : formData.wave
+      // Story-side waveTag must be one of the canonical sectors. The form's
+      // wave dropdown already produces those values; "other" is the catch-all.
+      const storyWaveTag = formData.wave === 'other' ? 'other' : (formData.wave || 'other')
 
       setLoading(true)
+      setActiveIntent(intent)
       try {
-        const result = await signManifesto({
+        if (existingSignerId) {
+          // The user has an active claimed session — post the story directly.
+          // No new signup, no email round-trip required.
+          await publishStory({
+            signerId: existingSignerId,
+            caption: formData.story.trim(),
+            waveTag: storyWaveTag,
+          })
+          await trackAction({
+            signerId: existingSignerId,
+            action: 'shared_story',
+            metadata: { source: 'manual_manifesto', subject: formData.subject },
+          })
+
+          if (intent !== 'wall') {
+            await openSocialShare(intent, existingSignerId)
+          }
+
+          setSignerId(existingSignerId)
+          setIsLeaving(true)
+          onSuccess(existingSignerId, formData.firstName)
+          setTimeout(() => setSubmitted(true), 350)
+          return
+        }
+
+        // First-time signer in this tab. The /api/manifesto endpoint:
+        //   1. Creates the signer (or finds the existing one — both paths
+        //      return identical 200, anti-enumeration is preserved).
+        //   2. Creates the story inline when caption + waveTag are present.
+        //   3. Emails a magic link the user clicks to unlock further actions
+        //      (the `nw_signer` cookie is set by /api/manifesto/claim).
+        // We don't get a signerId back, by design. The user still sees the
+        // "You're now on the wave" success screen immediately. Any further
+        // story posting / mark download requires them to click the email
+        // magic link in a new tab to claim a session.
+        await signManifesto({
           firstName: formData.firstName,
           country: formData.country,
+          email: formData.email,
           wave: effectiveWave || undefined,
+          caption: formData.story.trim(),
+          waveTag: storyWaveTag,
+          company: honeypot,
+          captchaToken: captchaToken || undefined,
         })
+        try { sessionStorage.setItem('nw_first_name', formData.firstName) } catch {}
 
-        setSignerId(result.signerId)
-        sessionStorage.setItem('nw_signer_id', result.signerId)
-        sessionStorage.setItem('nw_first_name', formData.firstName)
+        // Open the chosen social share window immediately so the user gets
+        // the response they expected from clicking "Share on X". The follow-up
+        // tracking call is skipped because we have no signerId yet (it will
+        // resume after the user clicks the email magic link in /welcome).
+        if (intent !== 'wall') {
+          const shareText = getManualShareText()
+          const url = window.location.origin
+          switch (intent) {
+            case 'twitter':
+              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer')
+              break
+            case 'linkedin':
+              window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
+              navigator.clipboard.writeText(shareText).catch(() => {})
+              setError(t('signForm.storyCopiedLinkedIn'))
+              break
+            case 'facebook':
+              window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
+              navigator.clipboard.writeText(shareText).catch(() => {})
+              setError(t('signForm.storyCopiedFacebook'))
+              break
+            case 'instagram':
+              navigator.clipboard.writeText(shareText).catch(() => {})
+              setError(t('signForm.storyCopiedInstagram'))
+              break
+          }
+        }
 
-        await publishStory({ signerId: result.signerId, caption: formData.story.trim(), waveTag: effectiveWave || 'other' })
-        await trackAction({ signerId: result.signerId, action: 'shared_story', metadata: { source: 'manual_manifesto', subject: formData.subject } })
-
-        // Fade the form out first, then swap to the success state
         setIsLeaving(true)
-        onSuccess(result.signerId, formData.firstName)
+        onSuccess('', formData.firstName)
         setTimeout(() => setSubmitted(true), 350)
       } catch (err: any) {
-        setError(err.message ?? 'Something went wrong. Please try again.')
+        setError(err.message ?? t('signForm.genericError'))
       } finally {
         setLoading(false)
+        setActiveIntent(null)
       }
     }
 
@@ -114,72 +234,151 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
           {!submitted ? (
             <div style={{ transition: 'opacity 0.35s ease, transform 0.35s ease', opacity: isLeaving ? 0 : 1, transform: isLeaving ? 'translateY(-14px)' : 'translateY(0)' }}>
               <div className="text-center mb-14">
-                <p className="font-mono text-2xl md:text-4xl uppercase font-black tracking-widest text-[#DD3935] mb-3">Step 1</p>
-                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight mb-4">Add Your Wave.</h2>
-                <p className="text-xl max-w-3xl mx-auto">Sign the Manifesto by writing and publishing your story.</p>
+                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight mb-4">{t('signForm.title')}</h2>
+                <p className="text-xl max-w-3xl mx-auto">{t('signForm.subtitle')}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-[0.95fr_1.05fr] gap-8 md:gap-10 items-start">
-                <div className="relative w-full min-h-[760px] overflow-hidden -ml-20">
-                  <img src={waveImage} alt="Wave manifesto" className="absolute inset-0 w-full h-full object-cover object-left" />
+                <div className="hidden md:block relative w-full min-h-[760px] overflow-hidden md:-ml-20">
+                  <img src={waveImage} alt={t('signForm.waveAlt')} className="absolute inset-0 w-full h-full object-cover object-left" />
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <Input label="First name" type="text" required value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} />
+                <form onSubmit={(e) => e.preventDefault()} className="space-y-6" noValidate>
+                  <Honeypot value={honeypot} onChange={setHoneypot} />
+                  <Input
+                    label={t('signForm.fullName')}
+                    name="firstName"
+                    type="text"
+                    required
+                    maxLength={LIMITS.firstName}
+                    value={formData.firstName}
+                    error={fieldErrors.firstName}
+                    onChange={(e) => updateField('firstName', e.target.value)}
+                  />
 
-                  <Select label="Country" required options={AFRICAN_COUNTRIES_WITH_PLACEHOLDER} value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })} />
+                  <div className="w-full">
+                    <label htmlFor="country" className="block mb-2 text-base font-bold uppercase tracking-wide font-mono">
+                      {t('signForm.country')}
+                    </label>
+                    <select
+                      id="country"
+                      name="country"
+                      required
+                      value={formData.country}
+                      aria-invalid={fieldErrors.country ? true : undefined}
+                      onChange={(e) => updateField('country', e.target.value)}
+                      className={`w-full px-4 py-3 bg-[#F5F5F5] border ${fieldErrors.country ? 'border-[#dd3935]' : 'border-[#0C0C0A]'} focus:outline-none focus:ring-2 focus:ring-[#dd3935] cursor-pointer`}
+                    >
+                      {countryOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                    {fieldErrors.country && (
+                      <p className="mt-1 text-xs font-mono text-[#dd3935]">{fieldErrors.country}</p>
+                    )}
+                  </div>
+
+                  <Input
+                    label={t('signForm.email')}
+                    name="email"
+                    type="email"
+                    required
+                    maxLength={LIMITS.email}
+                    placeholder={t('signForm.emailPlaceholder')}
+                    value={formData.email}
+                    error={fieldErrors.email}
+                    onChange={(e) => updateField('email', e.target.value)}
+                  />
 
                   <div>
-                    <label className="block mb-2 text-sm font-mono uppercase tracking-wide">
-                      What's your wave? <span className="text-[#dd3935]">*</span>
+                    <label htmlFor="wave" className="block mb-2 text-base font-bold font-mono uppercase tracking-wide">
+                      {t('signForm.whatsYourWave')} <span className="text-[#dd3935]">*</span>
                     </label>
-                    <select required value={formData.wave}
-                      onChange={(e) => setFormData({ ...formData, wave: e.target.value, waveOther: '' })}
-                      className="w-full border-2 border-[#0C0C0A] bg-white px-4 py-3 font-mono text-sm focus:border-[#DD3935] outline-none">
-                      {WAVE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    <select
+                      id="wave"
+                      name="wave"
+                      required
+                      value={formData.wave}
+                      aria-invalid={fieldErrors.wave ? true : undefined}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, wave: e.target.value, waveOther: '' }))
+                        if (fieldErrors.wave || fieldErrors.waveOther) {
+                          setFieldErrors(prev => ({ ...prev, wave: undefined, waveOther: undefined }))
+                        }
+                      }}
+                      className={`w-full border-2 bg-white px-4 py-3 font-mono text-sm focus:border-[#DD3935] outline-none ${
+                        fieldErrors.wave ? 'border-[#DD3935]' : 'border-[#0C0C0A]'
+                      }`}>
+                      {waveOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
+                    {fieldErrors.wave && (
+                      <p className="mt-1 text-xs font-mono text-[#DD3935]">{fieldErrors.wave}</p>
+                    )}
                     {formData.wave === 'other' && (
                       <div className="mt-3">
-                        <Input type="text" required maxLength={60} placeholder="Describe your wave..."
-                          value={formData.waveOther} onChange={(e) => setFormData({ ...formData, waveOther: e.target.value })} />
-                        <p className="text-xs text-gray-500 mt-1">{formData.waveOther.length}/60 characters</p>
+                        <Input
+                          name="waveOther"
+                          type="text"
+                          required
+                          maxLength={LIMITS.waveOther}
+                          placeholder={t('signForm.describeWavePlaceholder')}
+                          value={formData.waveOther}
+                          error={fieldErrors.waveOther}
+                          onChange={(e) => updateField('waveOther', e.target.value)}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">{formData.waveOther.length}/{LIMITS.waveOther} {t('contact.charactersSuffix')}</p>
                       </div>
                     )}
                   </div>
 
                   <div>
-                    <label className="block mb-3 text-sm font-mono uppercase tracking-wide">Who is this about?</label>
+                    <label className="block mb-3 text-base font-bold font-mono uppercase tracking-wide">{t('signForm.whoAbout')}</label>
                     <div className="flex gap-4 flex-wrap">
-                      {['Me', 'Someone', 'Organisation'].map((option) => (
-                        <label key={option} className="flex items-center gap-3 cursor-pointer px-4 py-3 border-2 border-[#0C0C0A] hover:bg-white transition-colors min-w-[120px]">
-                          <input type="radio" name="manual-subject" value={option.toLowerCase()}
-                            checked={formData.subject === option.toLowerCase()}
+                      {[
+                        { value: 'me', label: t('signForm.subjectMe') },
+                        { value: 'someone', label: t('signForm.subjectSomeone') },
+                        { value: 'organisation', label: t('signForm.subjectOrganisation') },
+                      ].map((option) => (
+                        <label key={option.value} className="flex items-center gap-3 cursor-pointer px-4 py-3 border-2 border-[#0C0C0A] hover:bg-white transition-colors min-w-[120px]">
+                          <input type="radio" name="manual-subject" value={option.value}
+                            checked={formData.subject === option.value}
                             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                             className="w-5 h-5 accent-[#dd3935]" />
-                          <span className="text-base">{option}</span>
+                          <span className="text-base">{option.label}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-mono uppercase tracking-wide">
-                        Tell your story <span className="text-[#dd3935]">*</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                      <label className="text-base font-bold font-mono uppercase tracking-wide">
+                        {t('signForm.tellStory')} <span className="text-[#dd3935]">*</span>
                       </label>
                       {!showAiHelper && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAiHelper(true)}
-                          className="flex items-center gap-1.5 px-3 py-1 border border-[#DD3935] text-[#DD3935] hover:bg-[#DD3935] hover:text-white transition-colors text-xs font-mono uppercase tracking-wide"
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                          </svg>
-                          Need help? Use AI
-                        </button>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => setShowAiHelper(true)}
+                            className="flex items-center gap-1.5 px-3 py-1 border border-[#DD3935] text-[#DD3935] hover:bg-[#DD3935] hover:text-white transition-colors text-xs font-mono uppercase tracking-wide whitespace-nowrap"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                            </svg>
+                            {t('signForm.needHelpAi')}
+                          </button>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => navigate('/ai-prompt')}
+                              aria-label={t('signForm.aiPromptAria')}
+                              className="flex items-center justify-center w-5 h-5 rounded-full border border-[#0C0C0A]/40 text-[#0C0C0A]/60 hover:border-[#DD3935] hover:text-[#DD3935] transition-colors text-[10px] font-mono font-bold"
+                            >
+                              ?
+                            </button>
+                            <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-48 rounded bg-[#0C0C0A] px-3 py-2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-center z-10">
+                              {t('signForm.aiTooltip')}
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -188,25 +387,77 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                         subject={formData.subject}
                         wave={formData.wave === 'other' ? formData.waveOther : formData.wave}
                         onComplete={(caption) => {
-                          setFormData({ ...formData, story: caption })
+                          updateField('story', caption)
                           setShowAiHelper(false)
                         }}
                         onCancel={() => setShowAiHelper(false)}
                       />
                     ) : (
                       <>
-                        <Textarea rows={6} required maxLength={600}
-                          placeholder="Write what you're building, creating, changing, or backing..."
-                          value={formData.story} onChange={(e) => setFormData({ ...formData, story: e.target.value })}
-                          className="bg-white" />
-                        <p className="text-xs text-gray-500 mt-1">{formData.story.length}/600 characters</p>
+                        <Textarea
+                          name="story"
+                          rows={6}
+                          required
+                          maxLength={LIMITS.story}
+                          placeholder={t('signForm.storyPlaceholder')}
+                          value={formData.story}
+                          error={fieldErrors.story}
+                          onChange={(e) => updateField('story', e.target.value)}
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">{formData.story.length}/{LIMITS.story} {t('contact.charactersSuffix')}</p>
                       </>
                     )}
                   </div>
 
-                  <Button type="submit" className="w-full text-lg py-5" disabled={loading}>
-                    {loading ? 'Publishing...' : 'Publish your story'}
-                  </Button>
+                  <Captcha
+                    onToken={setCaptchaToken}
+                    onError={() => setCaptchaToken('')}
+                  />
+
+                  {!showShareOptions ? (
+                    <Button type="button" className="w-full text-lg py-5"
+                      onClick={() => {
+                        if (!runValidation()) return
+                        setShowShareOptions(true)
+                      }}>
+                      {t('signForm.publish')}
+                    </Button>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-xs font-mono uppercase tracking-widest text-[#0C0C0A]/50 text-center">{t('signForm.shareChoiceHeader')}</p>
+                      <div className="relative group">
+                        <Button type="button" className="w-full text-lg py-5" disabled={loading}
+                          onClick={() => handleShare('wall')}>
+                          {loading && activeIntent === 'wall' ? t('signForm.publishing') : t('signForm.shareToWall')}
+                        </Button>
+                        <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded bg-[#0C0C0A] px-3 py-2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-center">
+                          {t('signForm.wallTooltip')}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-mono uppercase tracking-widest text-[#0C0C0A]/50 text-center mb-2">{t('signForm.shareToSocials')}</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <Button type="button" variant="secondary" className="w-full py-4 text-sm" disabled={loading}
+                            onClick={() => handleShare('twitter')}>
+                            {loading && activeIntent === 'twitter' ? '...' : t('signForm.shareX')}
+                          </Button>
+                          <Button type="button" variant="secondary" className="w-full py-4 text-sm" disabled={loading}
+                            onClick={() => handleShare('linkedin')}>
+                            {loading && activeIntent === 'linkedin' ? '...' : t('signForm.shareLinkedIn')}
+                          </Button>
+                          <Button type="button" variant="secondary" className="w-full py-4 text-sm" disabled={loading}
+                            onClick={() => handleShare('facebook')}>
+                            {loading && activeIntent === 'facebook' ? '...' : t('signForm.shareFacebook')}
+                          </Button>
+                          <Button type="button" variant="secondary" className="w-full py-4 text-sm" disabled={loading}
+                            onClick={() => handleShare('instagram')}>
+                            {loading && activeIntent === 'instagram' ? '...' : t('signForm.shareInstagram')}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {error && <p className="text-[#dd3935] text-sm mt-2 text-center">{error}</p>}
                 </form>
@@ -217,42 +468,41 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
               className="text-center space-y-8"
               style={{ transition: 'opacity 0.45s ease, transform 0.45s ease', opacity: successVisible ? 1 : 0, transform: successVisible ? 'translateY(0)' : 'translateY(28px)' }}
             >
-              <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tight">You're now on the wave.</h2>
-              <p className="text-2xl">Welcome, {formData.firstName}.</p>
-              <p className="text-base text-gray-600">Your story has been published on the Stories Wall for others to see and be inspired by.</p>
-
-              <div className="flex flex-col md:flex-row gap-4 justify-center pt-8 flex-wrap">
-                <Button onClick={() => navigate('/get-mark')} className="px-8 py-4">
-                  Get the wave mark →
+              <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tight">{t('signForm.successTitle')}</h2>
+              <p className="text-xl md:text-2xl">{t('signForm.successWelcome', { name: formData.firstName })}</p>
+              <p className="text-base text-gray-600">{t('signForm.successBodyPrefix')}<span onClick={() => navigate('/stories')} className="underline underline-offset-2 cursor-pointer hover:text-[#DD3935] transition-colors">{t('signForm.successBodyLink')}</span>{t('signForm.successBodySuffix')}<br/>{t('signForm.successBodyLine2')}</p>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-center pt-8">
+                <Button onClick={() => navigate('/get-mark')} className="px-6 py-4 text-sm sm:text-base">
+                  {t('signForm.getWaveMark')}
                 </Button>
                 <Button variant="secondary" onClick={async () => {
-                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getManualShareText())}`, '_blank')
+                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getManualShareText())}`, '_blank', 'noopener,noreferrer')
                   await trackSocial('twitter')
-                }} className="px-8 py-4">
-                  Share #Notwaiting on X →
+                }} className="px-6 py-4 text-sm sm:text-base">
+                  {t('signForm.shareOnX')}
                 </Button>
                 <Button variant="secondary" onClick={async () => {
-                  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`, '_blank')
+                  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`, '_blank', 'noopener,noreferrer')
                   navigator.clipboard.writeText(getManualShareText()).catch(() => {})
-                  alert('Story copied. LinkedIn opened — paste your story into the post.')
+                  setError(t('signForm.storyCopiedLinkedIn'))
                   await trackSocial('linkedin')
-                }} className="px-8 py-4">
-                  Share #Notwaiting on LinkedIn →
+                }} className="px-6 py-4 text-sm sm:text-base">
+                  {t('signForm.shareOnLinkedIn')}
                 </Button>
                 <Button variant="secondary" onClick={async () => {
-                  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`, '_blank')
+                  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`, '_blank', 'noopener,noreferrer')
                   navigator.clipboard.writeText(getManualShareText()).catch(() => {})
-                  alert('Story copied. Facebook opened — paste your story into the post.')
+                  setError(t('signForm.storyCopiedFacebook'))
                   await trackSocial('facebook')
-                }} className="px-8 py-4">
-                  Share #Notwaiting on Facebook →
+                }} className="px-6 py-4 text-sm sm:text-base">
+                  {t('signForm.shareOnFacebook')}
                 </Button>
                 <Button variant="secondary" onClick={async () => {
                   navigator.clipboard.writeText(getManualShareText()).catch(() => {})
-                  alert('Story copied. You can now paste it on Instagram.')
+                  setError(t('signForm.storyCopiedInstagram'))
                   await trackSocial('instagram')
-                }} className="px-8 py-4">
-                  Copy #Notwaiting for Instagram →
+                }} className="px-6 py-4 text-sm sm:text-base">
+                  {t('signForm.copyForInstagram')}
                 </Button>
               </div>
             </div>

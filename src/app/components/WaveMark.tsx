@@ -45,6 +45,7 @@ export default function WaveMark({ size = 40, color = '#DD3935' }: WaveMarkProps
         height: size,
         objectFit: 'contain',
         filter: getColorFilter(color),
+        display: 'block',
       }}
     />
   );

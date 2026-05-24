@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 
 function figmaAssetResolver() {
@@ -23,6 +24,33 @@ export default defineConfig({
     // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['icon-192.svg', 'icon-512.svg', 'icon-maskable.svg'],
+      manifest: {
+        name: '#NotWaiting — Opportunity Africa',
+        short_name: '#NotWaiting',
+        description: 'A movement for African builders, creators, and innovators.',
+        theme_color: '#DD3935',
+        background_color: '#F5F5F5',
+        display: 'standalone',
+        start_url: '/',
+        scope: '/',
+        icons: [
+          { src: '/icon-192.svg',     sizes: '192x192',  type: 'image/svg+xml' },
+          { src: '/icon-512.svg',     sizes: '512x512',  type: 'image/svg+xml' },
+          { src: '/icon-maskable.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,woff2}'],
+        // We deliberately do NOT add a runtime cache for Supabase / the API.
+        // Auth tokens and per-user data must never be served to a different
+        // user from a stale ServiceWorker cache on shared devices, and
+        // NetworkFirst doesn't strip Authorization-bearing responses.
+        runtimeCaching: [],
+      },
+    }),
   ],
   resolve: {
     alias: {

@@ -1,0 +1,104 @@
+# =============================================================
+# #NotWaiting — Apache .htaccess for KonsoleH (and any Apache host)
+#
+# Three jobs:
+#   1. SPA routing  — every unknown path returns index.html so React Router
+#      can resolve it client-side.
+#   2. Security     — full set of hardening headers (CSP, HSTS, etc.) that
+#      mirror what vercel.json would emit if we deployed there.
+#   3. Caching      — 1-year immutable for hashed /assets/* bundles, never-
+#      cache for HTML / service-worker / manifest so deploys actually ship.
+#
+# IMPORTANT: This file lives in /public/ so Vite copies it into /dist/ on
+# `npm run build`. Never edit dist/.htaccess directly — it gets overwritten.
+# =============================================================
+
+# ── SPA fallback to index.html ───────────────────────────────
+Options -MultiViews
+RewriteEngine On
+
+# Real files (CSS, JS bundles, fonts, images, sw.js, etc.) → serve them.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [QSA,L]
+
+# Flag /assets/* requests so we can apply the immutable cache header below.
+# RewriteRule with no substitution is a no-op for routing; the [E=...] sets
+# an env var that the Header directive can check. This is the standard way
+# to express "if path matches X, set header Y" in .htaccess on Apache <2.4.
+RewriteRule ^assets/ - [E=IS_HASHED_ASSET:1]
+
+
+# ── Security headers ─────────────────────────────────────────
+<IfModule mod_headers.c>
+  # Clickjacking — refuse to be embedded in any iframe.
+  Header always set X-Frame-Options "DENY"
+
+  # Stop browsers from MIME-sniffing a response away from the declared type.
+  Header always set X-Content-Type-Options "nosniff"
+
+  # Only leak the origin (not the full URL) on cross-origin navigation.
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Lock down browser features the campaign site never uses, and opt out of
+  # FLoC / Topics tracking via interest-cohort=().
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+
+  # 2-year HSTS, applies to subdomains, ready for preload submission.
+  Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+
+  # Process-level isolation — strong defense-in-depth against Spectre-class
+  # cross-origin leaks and against window.opener tampering.
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Cross-Origin-Resource-Policy "same-origin"
+
+  # Content Security Policy — must mirror every host we legitimately load
+  # from. Update both this line AND the API CSP if a new third-party is added.
+  # If you ever inline a <script>, you'll need a nonce or hash here.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com https://fonts.googleapis.com https://fonts.cdnfonts.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.cdnfonts.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.notwaiting.africa https://notwaiting-api-production.up.railway.app https://hcaptcha.com https://*.hcaptcha.com; frame-src https://hcaptcha.com https://*.hcaptcha.com https://www.youtube-nocookie.com https://www.youtube.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; worker-src 'self'"
+</IfModule>
+
+
+# ── Caching ──────────────────────────────────────────────────
+<IfModule mod_headers.c>
+  # Hashed Vite bundle assets — filenames change on every build, so they
+  # are safe to cache forever. The IS_HASHED_ASSET env var was set above by
+  # the rewrite that matches ^assets/.
+  Header set Cache-Control "public, max-age=31536000, immutable" env=IS_HASHED_ASSET
+
+  # HTML must never be long-cached — it bootstraps the SPA and points at
+  # the latest hashed bundles. Stale HTML = users running old JS forever.
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # Service-worker, registration shim and PWA manifest: the spec says these
+  # should not be long-cached, otherwise a deploy can't roll out.
+  <FilesMatch "^(sw\.js|registerSW\.js|workbox-.*\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+
+# ── Compression ──────────────────────────────────────────────
+# KonsoleH ships mod_deflate; brotli is unlikely. Worth ~70% off JS/CSS/HTML.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript
+  AddOutputFilterByType DEFLATE application/json application/xml application/rss+xml
+  AddOutputFilterByType DEFLATE application/manifest+json
+  AddOutputFilterByType DEFLATE image/svg+xml font/woff font/woff2
+</IfModule>
+
+
+# ── MIME types (defensive — KonsoleH usually has these) ──────
+AddType application/javascript          .js
+AddType text/css                        .css
+AddType application/manifest+json       .webmanifest
+AddType image/svg+xml                   .svg
+AddType image/webp                      .webp
+AddType image/avif                      .avif
+AddType font/woff2                      .woff2
+AddType video/mp4                       .mp4

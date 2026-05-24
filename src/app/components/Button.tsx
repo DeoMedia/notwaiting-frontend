@@ -1,4 +1,5 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary';
@@ -7,6 +8,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = 'primary', children, loading, className = '', ...props }: ButtonProps) {
+  const { t } = useTranslation();
   const baseClasses = 'px-8 py-4 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variantClasses = {
@@ -20,7 +22,7 @@ export function Button({ variant = 'primary', children, loading, className = '',
       disabled={loading || props.disabled}
       {...props}
     >
-      {loading ? 'Loading...' : children}
+      {loading ? t('common.loading') : children}
     </button>
   );
 }

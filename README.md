@@ -1,3 +1,3 @@
 # notwaiting-frontend
 
-#NotWaiting public frontend.
+#NotWaiting frontend testing environment app.

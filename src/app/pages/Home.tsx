@@ -1,35 +1,183 @@
-import { useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { ManifestoSignForm } from '../components/ManifestoSignForm';
+import { ManifestoInlineForm } from '../components/ManifestoInlineForm';
 import { StoriesSlider } from '../components/StoriesSlider';
-import { StatsSection, type StatsSectionHandle } from '../components/StatsSection';
-import heroImage  from '../../imports/Untitled_design_(6).png';
-import heroImage2 from '../../imports/image-4.png';
-import heroShapes from '../../imports/web_template.png';
-import patternBg  from '../../imports/PATTERN2.png';
+import { StatsSection } from '../components/StatsSection';
+import { HeroOverlay } from '../components/HeroOverlay';
+// import heroDesktop1 from '../../styles/Landing1.webp';
+// import heroDesktop2 from '../../styles/Landing2.webp';
+import heroDesktop3 from '../../styles/Landing3.webp';
+// import heroDesktop4 from '../../styles/Landing4.webp';
+import heroMobile1 from '../../styles/PhoneLandingmobile-01.webp';
+// import heroMobile2 from '../../styles/PhoneLandingmobile-02.webp';
+// import heroMobile3 from '../../styles/PhoneLandingmobile-03.webp';
+import heroMobile4 from '../../styles/PhoneLandingmobile-04.webp';
 import patternBg2 from '../../imports/PATTERN_1-1.png';
 import waveMarkExample from '../../imports/image-2.png';
 import { useNavigate } from 'react-router';
+import { getSignerCount } from '../utils/api';
+
+let manifestoAutoScrolled = false;
+
+type ManifestoStats = {
+  total_signers: number
+  total_countries: number
+}
+
+function AnimatedManifestoNumber({ value, active }: { value: number; active: boolean }) {
+  const [displayValue, setDisplayValue] = useState(0)
+  const displayValueRef = useRef(0)
+
+  useEffect(() => {
+    if (!active) return
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayValue(value)
+      displayValueRef.current = value
+      return
+    }
+
+    const from = displayValueRef.current
+    const difference = value - from
+    const duration = 1200
+    const startedAt = performance.now()
+    let frame = 0
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      const nextValue = Math.round(from + difference * eased)
+      displayValueRef.current = nextValue
+      setDisplayValue(nextValue)
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick)
+      } else {
+        displayValueRef.current = value
+      }
+    }
+
+    frame = requestAnimationFrame(tick)
+
+    return () => cancelAnimationFrame(frame)
+  }, [active, value])
+
+  return <span className="font-black text-[#DD3935]">{displayValue.toLocaleString()}</span>
+}
 
 export default function Home() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
+
+  const heroSlides: Array<{
+    desktop: string
+    mobile: string
+    overlay: { className: string; align: 'left' | 'center' | 'right' }
+  }> = [
+    // {
+    //   desktop: heroDesktop1,
+    //   mobile: heroMobile1,
+    //   overlay: {
+    //     align: 'left',
+    //     className:
+    //       'top-[6%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:-translate-y-1/2 md:left-[6%] md:translate-x-0 md:w-[42%]',
+    //   },
+    // },
+    // {
+    //   desktop: heroDesktop2,
+    //   mobile: heroMobile2,
+    //   overlay: {
+    //     align: 'left',
+    //     className:
+    //       'top-[6%] left-1/2 -translate-x-1/2 w-[90%] md:top-[18%] md:left-[8%] md:translate-x-0 md:w-[44%]',
+    //   },
+    // },
+    {
+      desktop: heroDesktop3,
+      mobile: heroMobile1,
+      overlay: {
+        align: 'center',
+        className:
+          'top-[2%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:left-auto md:-translate-x-0 md:-translate-y-1/2 md:right-[18%] md:w-[48%]',
+      },
+    },
+    // {
+    //   desktop: heroDesktop4,
+    //   mobile: heroMobile4,
+    //   overlay: {
+    //     align: 'center',
+    //     className:
+    //       'top-[6%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:-translate-y-1/2 md:left-[42%] md:translate-x-0 md:w-[52%]',
+    //   },
+    // },
+  ]
 
   const [activeHero, setActiveHero] = useState(0)
+  const [manifestoStats, setManifestoStats] = useState<ManifestoStats | null>(null)
+  const [manifestoCounterActive, setManifestoCounterActive] = useState(false)
 
   const signOnRef = useRef<HTMLDivElement>(null)
-  const statsRef  = useRef<StatsSectionHandle>(null)
+  const manifestoRef = useRef<HTMLElement>(null)
+  const displayedManifestoStats = manifestoStats ?? { total_signers: 0, total_countries: 0 }
+
+  const loadManifestoStats = useCallback(async () => {
+    try {
+      const data = await getSignerCount()
+      setManifestoStats({
+        total_signers: data.total_signers ?? 0,
+        total_countries: data.total_countries ?? 0,
+      })
+    } catch {
+      // Non-critical — keep the last known aggregate count.
+    }
+  }, [])
 
   // Hero auto-advance
   useEffect(() => {
-    const timer = setInterval(() => setActiveHero(prev => (prev === 0 ? 1 : 0)), 6000)
+    const timer = setInterval(() => setActiveHero(prev => (prev + 1) % heroSlides.length), 6000)
     return () => clearInterval(timer)
+  }, [heroSlides.length])
+
+  useEffect(() => {
+    loadManifestoStats()
+  }, [loadManifestoStats])
+
+  useEffect(() => {
+    if (!manifestoRef.current || manifestoCounterActive) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setManifestoCounterActive(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.18 },
+    )
+
+    observer.observe(manifestoRef.current)
+
+    return () => observer.disconnect()
+  }, [manifestoCounterActive])
+
+  // Auto-scroll to manifesto on first mount per page load.
+  // Module-level flag resets on hard refresh but persists across SPA route changes.
+  useEffect(() => {
+    if (manifestoAutoScrolled) return
+    manifestoAutoScrolled = true
+    const timer = setTimeout(() => {
+      manifestoRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 2000)
+    return () => clearTimeout(timer)
   }, [])
 
   const scrollToSignOn = () => signOnRef.current?.scrollIntoView({ behavior: 'smooth' })
 
   const handleSignSuccess = (_id: string, _name: string) => {
-    statsRef.current?.refresh()
+    loadManifestoStats()
   }
 
   return (
@@ -38,71 +186,26 @@ export default function Home() {
 
       {/* ── Hero slider ─── */}
       <section className="relative min-h-screen bg-white text-[#0C0C0A] overflow-hidden">
-        {/* Slide 1 */}
-        <div className={`absolute inset-0 transition-opacity duration-700 ${activeHero === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-          <div className="relative min-h-screen overflow-hidden">
-            <div className="absolute inset-0 bg-[#DD3935]">
-              <div className="absolute inset-y-0 right-0 w-[70%] bg-[#DD3935]">
-                <img src={heroImage} alt="#NotWaiting campaign portrait" className="absolute inset-0 w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#DD3935] via-[#DD3935]/70 via-[#DD3935]/25 to-transparent pointer-events-none" style={{ width: '44%' }} />
+        {heroSlides.map((slide, i) => (
+          <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${activeHero === i ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+            <div className="relative min-h-screen overflow-hidden">
+              <div className="absolute inset-0">
+                <picture className="absolute inset-0 w-full h-full">
+                  <source media="(min-width: 768px)" srcSet={slide.desktop} />
+                  <img src={slide.mobile} alt={t('hero.campaignAlt', { n: i + 1 })} className="absolute inset-0 w-full h-full object-cover object-center" />
+                </picture>
               </div>
-            </div>
-            <div className="absolute inset-0 z-20 flex items-center">
-              <div className="w-[70%] flex justify-center">
-                <div className="relative w-[900px] max-w-[90vw] h-[600px]">
-                  <img src={heroShapes} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none" style={{ transform: 'scale(1.3)' }} />
-                  <div className="absolute left-[18%] top-[28%] max-w-[460px]">
-                    <p className="font-mono text-xs md:text-sm uppercase text-black font-black mb-2">Entertainment, Tech, Finance, Agriculture & More</p>
-                    <h1 className="text-4xl md:text-6xl font-black uppercase leading-[0.9] text-[#DD3935] mb-4">Join The Wave</h1>
-                    <p className="font-black text-sm md:text-base leading-tight text-black mb-8">
-                      Africa is building, creating and leading right now.<br />
-                      On the 25th of May, we make it impossible to ignore.<br />
-                      Wear the Mark. Declare Your Wave. Pass it on.
-                    </p>
-                  </div>
-                  <p onClick={scrollToSignOn} className="absolute left-[30%] bottom-[20%] text-sm md:text-base font-black uppercase text-[#DD3935] cursor-pointer hover:underline underline-offset-4">
-                    Ready to join the movement?
-                  </p>
-                </div>
-              </div>
+              <HeroOverlay className={slide.overlay.className} align={slide.overlay.align} />
             </div>
           </div>
-        </div>
-
-        {/* Slide 2 */}
-        <div className={`absolute inset-0 transition-opacity duration-700 ${activeHero === 1 ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-          <div className="relative min-h-screen overflow-hidden">
-            <div className="absolute inset-0 flex">
-              <div className="w-[30%] bg-[#0C0C0A]" />
-              <div className="w-[70%] bg-[#0C0C0A] relative">
-                <img src={heroImage2} alt="#NotWaiting campaign portrait" className="absolute inset-0 w-full h-full object-cover object-center" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0C0C0A] via-[#0C0C0A]/70 via-[#0C0C0A]/30 to-transparent pointer-events-none" style={{ width: '50%' }} />
-              </div>
-            </div>
-            <div className="absolute inset-0 z-20 flex items-center">
-              <div className="w-[70%] flex justify-center">
-                <div className="relative w-[900px] max-w-[90vw] h-[600px]">
-                  <img src={heroShapes} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none" style={{ transform: 'scale(1.3)' }} />
-                  <div className="absolute left-[18%] top-[28%] max-w-[460px]">
-                    <p className="font-mono text-xs md:text-sm uppercase text-black font-black mb-2">Entertainment, Tech, Finance, Agriculture & More</p>
-                    <h2 className="text-4xl md:text-6xl font-black uppercase leading-[0.9] text-[#DD3935] mb-4">25 May 2026</h2>
-                    <p className="font-black text-sm md:text-base leading-tight text-black mb-8">One day. One mark. One continent<br />already moving</p>
-                  </div>
-                  <p onClick={scrollToSignOn} className="absolute left-[30%] bottom-[20%] text-sm md:text-base font-black uppercase text-[#DD3935] cursor-pointer hover:underline underline-offset-4">
-                    Ready to join the movement?
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        ))}
 
         {/* Dots */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-3">
-          {[0, 1].map(i => (
+          {heroSlides.map((_, i) => (
             <button key={i} onClick={() => setActiveHero(i)}
               className={`h-3 w-3 rounded-full transition ${activeHero === i ? 'bg-[#DD3935]' : 'bg-white/40'}`}
-              aria-label={`Go to slide ${i + 1}`} />
+              aria-label={t('hero.slideAria', { n: i + 1 })} />
           ))}
         </div>
         <div className="absolute bottom-0 left-0 right-0 z-30 grid grid-cols-3 h-[5px]">
@@ -111,29 +214,50 @@ export default function Home() {
       </section>
 
       {/* ── Manifesto text ─── */}
-      <section className="relative bg-white py-20 md:py-32 px-6 overflow-hidden">
-        <div className="absolute inset-0 opacity-30 pointer-events-none">
-          <img src={patternBg2} alt="" aria-hidden="true" className="w-full h-full object-cover" />
-        </div>
+      <section ref={manifestoRef} className="relative bg-white py-20 md:py-32 px-6 overflow-hidden">
         <div className="max-w-3xl mx-auto relative z-10">
-          <div className="space-y-8 text-lg md:text-xl leading-relaxed">
-            <p>I believe in my country and I believe in Africa.</p>
-            <p>I believe in the people, places, ideas, and bold actions moving this continent forward every day.</p>
-            <div className="border-l-4 border-[#dd3935] pl-6 my-12 py-6">
-              <p className="text-xl md:text-2xl font-bold leading-relaxed">
-                By signing this manifesto and joining the Opportunity Africa wave, I commit to using my voice, my work, and my platforms to show the progress we are making.
-              </p>
+          <h2 className="-mt-10 text-4xl md:text-6xl font-black uppercase tracking-tight text-center mb-8">{t('home.manifestoTitle')}</h2>
+          {manifestoStats && (
+            <p className="-mt-4 mb-10 text-center font-mono text-sm md:text-base text-[#0C0C0A]/70">
+              <AnimatedManifestoNumber value={manifestoStats.total_signers} active={manifestoCounterActive} />{' '}
+              {t('home.manifestoStatsUsersSuffix')}{' '}
+              <AnimatedManifestoNumber value={manifestoStats.total_countries} active={manifestoCounterActive} />{' '}
+              {t('home.manifestoStatsCountriesSuffix')}
+            </p>
+          )}
+          <div className="text-lg md:text-xl leading-relaxed">
+            <div className="relative pl-6 my-12 py-6">
+              <div className="absolute left-0 top-0 bottom-0 w-1 flex flex-col">
+                <div className="flex-1 bg-[#DD3935]" />
+                <div className="flex-1 bg-[#EBBD06]" />
+                <div className="flex-1 bg-[#027A4F]" />
+              </div>
+              <div className="space-y-6 text-xl md:text-2xl font-bold leading-relaxed">
+                <p>{t('home.manifestoP1Line1')}<br />{t('home.manifestoP1Line2')}</p>
+                <p>{t('home.manifestoP2')}</p>
+                <p>{t('home.manifestoP3Line1')}<br />{t('home.manifestoP3Line2')}</p>
+                <p>
+                  {t('home.manifestoP4')}
+                  <span className="font-custard normal-case">#NotWaiting</span>
+                </p>
+              </div>
             </div>
-            <div className="bg-[#F5F5F5] p-8 my-12">
-              <p className="text-2xl md:text-3xl font-black leading-tight text-center">
-                Because what we see, we believe in.<br />What we believe in, we back.<br />What we back, we build.
-              </p>
+             <div className="relative pl-6 my-12 py-6">
+              <div className="absolute left-0 top-0 bottom-0 w-1 flex flex-col">
+                <div className="flex-1 bg-[#DD3935]" />
+                <div className="flex-1 bg-[#EBBD06]" />
+                <div className="flex-1 bg-[#027A4F]" />
+              </div>
+              <p className="text-xl md:text-2xl font-bold leading-relaxed">{t('home.signCta')}</p>
+              <ManifestoInlineForm />
             </div>
-            <p className="text-2xl md:text-3xl font-black text-center">I am #NotWaiting.</p>
           </div>
-          <div className="text-center mt-16">
+          <div className="text-center mt-20">
             <p onClick={scrollToSignOn} className="text-xl md:text-2xl font-black uppercase text-[#DD3935] cursor-pointer hover:underline underline-offset-4 inline">
-              Ready to join the movement?
+              {t('home.readyToJoin')}
+            </p>
+            <p className="mt-4 text-base md:text-lg text-[#0C0C0A]/70 max-w-2xl mx-auto leading-relaxed">
+              {t('home.waveExplainer')}
             </p>
           </div>
         </div>
@@ -147,28 +271,27 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-start">
             <div className="space-y-8">
-              <p className="font-mono text-2xl md:text-4xl uppercase font-black tracking-widest text-[#DD3935]">Step 2</p>
               <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight leading-tight">
-                GET THE WAVE<br /><span className="text-[#DD3935]"> MARK</span>
+                {t('home.markHeading1')}<br /><span className="text-[#DD3935]"> {t('home.markHeading2')}</span>
               </h2>
               <p className="text-base md:text-lg text-[#0C0C0A]/90 leading-relaxed max-w-xl">
-                The wave mark is the symbol of the African continent. Use it on every post, every profile, and every platform where you share your wave.
+                {t('home.markBlurb')}
               </p>
               {[
-                { n: '01', title: 'Apply the mark → Frame your work', desc: 'Add it to your profile picture, cover photo, or content.' },
-                { n: '02', title: 'Share your wave → Post with #NotWaiting', desc: 'Include the hashtag and the wave mark in everything you post.' },
-                { n: '03', title: 'Tag someone. Circle back on this.', desc: 'Invite others to join the movement and wear the mark.' },
+                { n: '01', title: t('home.markStep1Title'), desc: t('home.markStep1Desc') },
+                { n: '02', title: t('home.markStep2Title'), desc: t('home.markStep2Desc') },
+                { n: '03', title: t('home.markStep3Title'), desc: t('home.markStep3Desc') },
               ].map(({ n, title, desc }) => (
                 <div key={n} className="flex gap-4">
                   <span className="text-[#DD3935] font-black font-mono text-lg flex-shrink-0">{n}</span>
                   <div><h3 className="font-black text-lg mb-1">{title}</h3><p className="text-sm text-[#0C0C0A]/80">{desc}</p></div>
                 </div>
               ))}
-              <Button onClick={() => navigate('/get-mark')} className="text-base px-8 py-4">Open the wave mark tool →</Button>
+              <Button onClick={() => navigate('/get-mark')} className="text-base px-8 py-4">{t('home.openMarkTool')}</Button>
             </div>
             <div className="space-y-6">
               <div className="relative aspect-square overflow-hidden rounded-lg">
-                <img src={waveMarkExample} alt="Example of wave mark applied to profile photo" className="w-full h-full object-cover" />
+                <img src={waveMarkExample} alt={t('home.markExampleAlt')} className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
@@ -176,7 +299,11 @@ export default function Home() {
       </section>
 
       {/* ── Stats section ─── */}
-      <StatsSection ref={statsRef} onJoinClick={scrollToSignOn} />
+      <StatsSection
+        onJoinClick={scrollToSignOn}
+        stats={displayedManifestoStats}
+        onRefresh={loadManifestoStats}
+      />
 
       {/* ── Stories slider ─── */}
       <StoriesSlider />
@@ -184,14 +311,14 @@ export default function Home() {
       {/* ── Protocol ─── */}
       <section className="bg-[#F5F5F5] py-28 px-6">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-12 text-center">The Protocol</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-12 text-center">{t('home.protocolTitle')}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
             {[
-              { step: '01', title: 'BUILD',  desc: 'Create something that matters' },
-              { step: '02', title: 'MARK',   desc: 'Add the wave mark' },
-              { step: '03', title: 'SHARE',  desc: 'Post with #NotWaiting' },
-              { step: '04', title: 'TAG',    desc: 'Invite others to join' },
-              { step: '05', title: 'GROW',   desc: 'Build the movement' },
+              { step: '01', title: t('home.protocol.build'),  desc: t('home.protocol.buildDesc') },
+              { step: '02', title: t('home.protocol.mark'),   desc: t('home.protocol.markDesc') },
+              { step: '03', title: t('home.protocol.share'),  desc: t('home.protocol.shareDesc') },
+              { step: '04', title: t('home.protocol.tag'),    desc: t('home.protocol.tagDesc') },
+              { step: '05', title: t('home.protocol.grow'),   desc: t('home.protocol.growDesc') },
             ].map(({ step, title, desc }) => (
               <div key={step} className="bg-white border-2 border-[#0C0C0A] p-6 text-center">
                 <div className="text-sm font-mono text-[#EBBD06] font-black mb-2">{step}</div>
