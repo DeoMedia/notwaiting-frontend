@@ -13,7 +13,7 @@ import frame2_02 from '../../imports/NotWaiting_Frame2-02.png';
 import frame2_03 from '../../imports/NotWaiting_Frame2-03.png';
 import waveMarkSrc from '../../imports/mark.png';
 import bgwaveMark from '../../imports/PATTERN2.png';
-import markAssetSrc from '../../styles/mark.svg';
+import markAssetSrc from '../../styles/the_mark.webp';
 
 const MONO: React.CSSProperties = { fontFamily: 'Space Mono, monospace' };
 const FRONTEND_URL = (
@@ -555,7 +555,7 @@ export default function GetMark() {
   const handleDownloadAssets = () => {
     const link = document.createElement('a');
     link.href = markAssetSrc;
-    link.download = 'notwaiting-wave-mark.svg';
+    link.download = 'notwaiting-wave-mark.webp';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

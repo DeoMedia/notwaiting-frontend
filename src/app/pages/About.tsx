@@ -6,10 +6,15 @@ import patternBg2 from '../../imports/PATTERN2.png';
 // YouTube Short uploaded to @notwaitingAfrica. Vertical 9:16 video — will
 // pillarbox inside the 16:9 embed frame, which is the standard look for
 // Shorts embeds on the web.
-const EXPLAINER_VIDEO_ID = 'r2z7xYlM9sg';
+const EXPLAINER_VIDEO_IDS: Record<string, string> = {
+  en: 'M1k-nKAonf4',
+  fr: 'nsfx-nXVh8w',
+};
 
 export default function About() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const explainerVideoId =
+    EXPLAINER_VIDEO_IDS[i18n.language.split('-')[0]] ?? EXPLAINER_VIDEO_IDS.en;
 
   const beliefs = [
     { num: '01', color: '#DD3935', title: t('about.belief1Title'), body: t('about.belief1Body') },
@@ -71,7 +76,8 @@ export default function About() {
         <div className="relative z-10 max-w-4xl mx-auto">
           <div className="relative w-full aspect-video">
             <iframe
-              src={`https://www.youtube-nocookie.com/embed/${EXPLAINER_VIDEO_ID}?rel=0&modestbranding=1`}
+              key={explainerVideoId}
+              src={`https://www.youtube-nocookie.com/embed/${explainerVideoId}?rel=0&modestbranding=1`}
               title={t('about.explainerTitle', { defaultValue: 'NotWaiting explainer video' })}
               className="absolute inset-0 w-full h-full"
               loading="lazy"

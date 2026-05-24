@@ -3,6 +3,7 @@ name: Deploy Frontend to KonsoleH
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -20,10 +21,14 @@ jobs:
           npm install
           npm run build
         env:
+          # Vite inlines VITE_* vars at build time, so every one the app reads
+          # at runtime must be present here (not on the runtime host).
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          # Vite inlines VITE_* vars at build time, so the Sentry DSN must be
-          # present here (not on the runtime host).
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_FRONTEND_URL: ${{ secrets.VITE_FRONTEND_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_HCAPTCHA_SITE_KEY: ${{ secrets.VITE_HCAPTCHA_SITE_KEY }}
 
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
