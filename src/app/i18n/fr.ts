@@ -364,6 +364,8 @@ export const fr: Translations = {
     signing: 'Signature…',
     signedTitle: 'Vous avez signé le manifeste, {{name}}.',
     signedBody: 'Bienvenue dans la vague. #NotWaiting',
+    successTitle: 'Vous êtes maintenant sur la vague, {{name}}.',
+    successBody: 'Bienvenue dans le mouvement. Vérifiez votre boîte de réception pour la confirmation, continuez à rejoindre le mouvement ou obtenez la marque de la vague.',
     genericError: "Une erreur s'est produite. Veuillez réessayer.",
   },
   signForm: {

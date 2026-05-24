@@ -361,6 +361,8 @@ export const en = {
     signing: 'Signing…',
     signedTitle: "You've signed the manifesto, {{name}}.",
     signedBody: 'Welcome to the wave. #NotWaiting',
+    successTitle: "You're now on the wave, {{name}}.",
+    successBody: 'Welcome to the movement. Check your inbox for confirmation, continue to join the movement or get the wave mark.',
     genericError: 'Something went wrong. Please try again.',
   },
   signForm: {
