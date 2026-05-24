@@ -96,7 +96,7 @@ export default function Root() {
             <p className="mt-2">{t('footer.movement')}</p>
           </div>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }
