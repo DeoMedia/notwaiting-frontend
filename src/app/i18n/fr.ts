@@ -127,6 +127,8 @@ export const fr: Translations = {
   },
   hero: {
     title: "L'Afrique est en pleine vague !",
+    titleLine1: "L'Afrique est",
+    titleLine2: 'en pleine vague !',
     in: 'En',
     andMore: 'et plus encore.',
     join: 'Rejoignez la vague !',
