@@ -60,6 +60,10 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const [isLeaving, setIsLeaving]     = useState(false)
     const [successVisible, setSuccessVisible] = useState(false)
     const [signerId, setSignerId]       = useState<string | null>(null)
+    // First-time signer who must still click the magic link in their email
+    // before the story we just stashed gets published. Drives the verify-copy
+    // success screen (vs. the "story is live" screen used for returning signers).
+    const [verifyState, setVerifyState] = useState<{ email: string; hadStory: boolean } | null>(null)
     const [showAiHelper, setShowAiHelper] = useState(false)
     const [honeypot, setHoneypot]       = useState('')
     const [captchaToken, setCaptchaToken] = useState('')
@@ -292,6 +296,8 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
             )
           }
         } catch { /* ignore quota / privacy-mode errors */ }
+
+        setVerifyState({ email: formData.email, hadStory: Boolean(trimmedStory) })
 
         const transitionToSuccess = () => {
           setIsLeaving(true)
@@ -618,6 +624,21 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                   )}
                 </form>
               </div>
+            </div>
+          ) : verifyState ? (
+            <div
+              className="text-center space-y-6 max-w-2xl mx-auto"
+              style={{ transition: 'opacity 0.45s ease, transform 0.45s ease', opacity: successVisible ? 1 : 0, transform: successVisible ? 'translateY(0)' : 'translateY(28px)' }}
+            >
+              <div className="font-mono text-xs tracking-widest uppercase text-[#DD3935] font-bold">{t('signForm.verifyEyebrow')}</div>
+              <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight">{t('signForm.verifyTitle')}</h2>
+              <p className="text-xl md:text-2xl">{t('signForm.successWelcome', { name: formData.firstName })}</p>
+              <p className="text-base text-gray-600">
+                {verifyState.hadStory
+                  ? t('signForm.verifyBody', { email: verifyState.email })
+                  : t('signForm.verifyBodyNoStory', { email: verifyState.email })}
+              </p>
+              <p className="font-mono text-sm text-[#0C0C0A]/60">{t('signForm.verifyHint')}</p>
             </div>
           ) : (
             <div
