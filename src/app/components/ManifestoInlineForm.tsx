@@ -4,6 +4,7 @@ import { signManifesto } from '../utils/api';
 import { Honeypot } from './Honeypot';
 import { Captcha, isCaptchaEnabled } from './Captcha';
 import { useLocalizedCountriesWithPlaceholder } from '../i18n/hooks';
+import { formatSubmitError } from '../utils/submitError';
 import {
   LIMITS,
   validateManifesto,
@@ -20,6 +21,7 @@ export function ManifestoInlineForm() {
   const [captchaToken, setCaptchaToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [errorKind, setErrorKind] = useState<'none' | 'captcha' | 'network' | 'other'>('none')
   const [fieldErrors, setFieldErrors] = useState<ValidationErrors<ManifestoField>>({})
   const [signed, setSigned] = useState(false)
 
@@ -30,9 +32,9 @@ export function ManifestoInlineForm() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submit = async () => {
     setError('')
+    setErrorKind('none')
 
     const result = validateManifesto(form, {}, t)
     if (!result.valid) {
@@ -40,7 +42,8 @@ export function ManifestoInlineForm() {
       return
     }
     if (isCaptchaEnabled() && !captchaToken) {
-      setError(t('inlineForm.captchaRequired') ?? 'Please complete the captcha challenge.')
+      setError(t('inlineForm.captchaRequired'))
+      setErrorKind('captcha')
       return
     }
     setFieldErrors({})
@@ -61,11 +64,18 @@ export function ManifestoInlineForm() {
       // confirmation email so /api/manifesto can't be used to enumerate.
       try { sessionStorage.setItem('nw_first_name', form.firstName.trim()) } catch {}
       setSigned(true)
-    } catch (err: any) {
-      setError(err.message ?? t('inlineForm.genericError'))
+    } catch (err: unknown) {
+      const info = formatSubmitError(err, t, 'inlineForm.genericError')
+      setError(info.message)
+      setErrorKind(info.retryable ? 'network' : 'other')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    void submit()
   }
 
   if (signed) {
@@ -167,7 +177,41 @@ export function ManifestoInlineForm() {
       </div>
 
       {error && (
-        <p className="text-[#DD3935] text-sm font-mono">{error}</p>
+        <div
+          role="alert"
+          aria-live="polite"
+          className="flex items-start gap-3 border-2 border-[#DD3935] bg-[#DD3935]/5 px-4 py-3"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#DD3935"
+            strokeWidth="2.25"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="flex-shrink-0 mt-0.5"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="13" />
+            <line x1="12" y1="16.5" x2="12" y2="16.5" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-[#DD3935] text-sm font-mono font-bold">{error}</p>
+            {errorKind === 'network' && (
+              <button
+                type="button"
+                onClick={() => void submit()}
+                disabled={loading}
+                className="mt-2 px-3 py-1.5 border-2 border-[#DD3935] text-[#DD3935] font-mono text-xs font-bold uppercase tracking-wide hover:bg-[#DD3935] hover:text-white transition-colors disabled:opacity-50"
+              >
+                {loading ? t('inlineForm.signing') : t('common.tryAgain')}
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       <Captcha

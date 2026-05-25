@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 
 import mdfLogo from '../../imports/MDF.png';
 import oaxtnfLogo from '../../imports/OAxTNF.png';
+import partnerLogo from '../../styles/partner_logo.jpeg';
 
 const PARTNER_KEYS = [
   'africanTechFoundation',
@@ -56,9 +57,9 @@ export default function Partners() {
 
       {/* ── PARTNER LOGOS ────────────────────────────────────── */}
       <section className="py-20 md:py-32 px-6 bg-white border-b border-[#0C0C0A]/10">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
 
-          {/* Section label — same max-w-4xl and left-aligned bar as Why Partner section */}
+          {/* Section label */}
           <div className="flex items-center gap-4 mb-14">
             <div className="h-8 w-1.5 flex-shrink-0 bg-[#DD3935]" />
             <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[#DD3935]">
@@ -67,16 +68,21 @@ export default function Partners() {
           </div>
 
           {/* Logo row */}
-          <div className="flex flex-wrap items-center justify-center gap-20 md:gap-32">
+          <div className="flex flex-wrap items-center justify-center gap-12 md:gap-20">
             <img
               src={mdfLogo}
               alt="Mo Dewji Foundation"
-              className="h-20 md:h-48 w-auto max-w-[220px] object-contain opacity-70 hover:opacity-100 transition-opacity duration-300"
+              className="h-48 sm:h-56 md:h-72 lg:h-80 w-auto max-w-[420px] object-contain hover:scale-105 transition-transform duration-300"
             />
             <img
               src={oaxtnfLogo}
               alt="OA x Trevor Noah Foundation"
-              className="h-20 md:h-48 w-auto max-w-[220px] object-contain opacity-70 hover:opacity-100 transition-opacity duration-300"
+              className="h-48 sm:h-56 md:h-72 lg:h-80 w-auto max-w-[420px] object-contain hover:scale-105 transition-transform duration-300"
+            />
+            <img
+              src={partnerLogo}
+              alt="Partner"
+              className="h-48 sm:h-56 md:h-72 lg:h-80 w-auto max-w-[420px] object-contain hover:scale-105 transition-transform duration-300"
             />
           </div>
         </div>

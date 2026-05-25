@@ -6,6 +6,7 @@ import { Input } from './Input';
 import { Textarea } from './Textarea';
 import { generateCaption, publishStory, trackAction } from '../utils/api';
 import { copyToClipboard } from '../utils/clipboard';
+import { SocialShareModal, type SharePlatform } from './SocialShareModal';
 import { useLocalizedSectors } from '../i18n/hooks';
 import {
   LIMITS,
@@ -38,6 +39,10 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
     const [copied, setCopied]             = useState(false)
     const [fieldErrors, setFieldErrors]   = useState<ValidationErrors<AiCaptionField>>({})
     const [statusMessage, setStatusMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null)
+    const [pendingShare, setPendingShare] = useState<{
+      platform: SharePlatform
+      onContinue: () => void
+    } | null>(null)
 
     const flashStatus = (kind: 'info' | 'error', text: string) => {
       setStatusMessage({ kind, text })
@@ -102,17 +107,34 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
       setTimeout(() => setCopied(false), 2000)
     }
 
-    const shareOnPlatform = async (platform: string, openUrl?: string) => {
-      if (openUrl) window.open(openUrl, '_blank', 'noopener,noreferrer')
-      if (platform !== 'twitter') {
-        await copyToClipboard(`${currentText}\n\n#NotWaiting`)
-        if (platform === 'linkedin') flashStatus('info', t('aiCaption.captionCopiedLinkedIn'))
-        if (platform === 'facebook') flashStatus('info', t('aiCaption.captionCopiedFacebook'))
-        if (platform === 'instagram') flashStatus('info', t('aiCaption.captionCopiedInstagram'))
-      }
-      if (signerId) {
-        trackAction({ signerId, action: 'shared_social', metadata: { platform } })
-      }
+    const shareOnPlatform = (platform: SharePlatform) => {
+      const text = `${currentText}\n\n#NotWaiting`
+      const openUrl = (() => {
+        switch (platform) {
+          case 'twitter':
+            return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`
+          case 'linkedin':
+            return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`
+          case 'facebook':
+            return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`
+          case 'instagram':
+            return 'https://www.instagram.com/'
+        }
+      })()
+      setPendingShare({
+        platform,
+        onContinue: () => {
+          // Copy BEFORE opening the new tab — once window.open steals focus
+          // the document loses it and clipboard writes get rejected.
+          if (platform !== 'twitter') {
+            void copyToClipboard(text)
+          }
+          window.open(openUrl, '_blank', 'noopener,noreferrer')
+          if (signerId) {
+            trackAction({ signerId, action: 'shared_social', metadata: { platform } })
+          }
+        },
+      })
     }
 
     const postToWall = async () => {
@@ -339,18 +361,15 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
                       </div>
 
                       <div className="flex gap-2 flex-wrap">
-                        <button onClick={() => shareOnPlatform('twitter',
-                          `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${currentText}\n\n#NotWaiting`)}`)}
+                        <button onClick={() => shareOnPlatform('twitter')}
                           className="px-3 py-1.5 text-xs bg-[#0C0C0A] text-white hover:bg-[#DD3935] transition-colors">
                           {t('aiCaption.shareX')}
                         </button>
-                        <button onClick={() => shareOnPlatform('linkedin',
-                          `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`)}
+                        <button onClick={() => shareOnPlatform('linkedin')}
                           className="px-3 py-1.5 text-xs bg-[#0C0C0A] text-white hover:bg-[#DD3935] transition-colors">
                           {t('aiCaption.shareLinkedIn')}
                         </button>
-                        <button onClick={() => shareOnPlatform('facebook',
-                          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`)}
+                        <button onClick={() => shareOnPlatform('facebook')}
                           className="px-3 py-1.5 text-xs bg-[#0C0C0A] text-white hover:bg-[#DD3935] transition-colors">
                           {t('aiCaption.shareFacebook')}
                         </button>
@@ -370,6 +389,17 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
             </div>
           </div>
         </div>
+
+        <SocialShareModal
+          open={!!pendingShare}
+          platform={pendingShare?.platform ?? null}
+          onContinue={() => {
+            const continueCb = pendingShare?.onContinue
+            setPendingShare(null)
+            continueCb?.()
+          }}
+          onCancel={() => setPendingShare(null)}
+        />
       </section>
     )
   }
