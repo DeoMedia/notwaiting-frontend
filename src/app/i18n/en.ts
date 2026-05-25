@@ -405,7 +405,7 @@ export const en = {
     successBodyLine2: 'Get the wave mark on your favourite photo or share your story on socials',
     verifyTitle: 'Check your inbox.',
     verifyEyebrow: 'One more step',
-    verifyBody: "We've sent a verification link to {{email}}. Click it to publish your story and join the wave.",
+    verifyBody: "We've sent a verification link to {{email}}. Verify to publish your story on the story wall and join the wave.",
     verifyBodyNoStory: "We've sent a verification link to {{email}}. Click it to confirm your email and join the wave.",
     verifyHint: "Didn't get it? Check your spam folder, or resend below.",
     getWaveMark: 'Get the wave mark →',
