@@ -40,9 +40,8 @@ RewriteRule ^assets/ - [E=IS_HASHED_ASSET:1]
   # Only leak the origin (not the full URL) on cross-origin navigation.
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
-  # Lock down browser features the campaign site never uses, and opt out of
-  # FLoC / Topics tracking via interest-cohort=().
-  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+  # Lock down browser features the campaign site never uses.
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 
   # 2-year HSTS, applies to subdomains, ready for preload submission.
   Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
@@ -55,7 +54,7 @@ RewriteRule ^assets/ - [E=IS_HASHED_ASSET:1]
   # Content Security Policy — must mirror every host we legitimately load
   # from. Update both this line AND the API CSP if a new third-party is added.
   # If you ever inline a <script>, you'll need a nonce or hash here.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://hcaptcha.com https://*.hcaptcha.com; style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com https://fonts.googleapis.com https://fonts.cdnfonts.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.cdnfonts.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.notwaiting.africa https://notwaiting-api-production.up.railway.app https://hcaptcha.com https://*.hcaptcha.com; frame-src https://hcaptcha.com https://*.hcaptcha.com https://www.youtube-nocookie.com https://www.youtube.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; worker-src 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-3E/8Mu8DfmMIHEB00OK+Vch9cUl4ce5G0OBcz1acaps=' https://hcaptcha.com https://*.hcaptcha.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com https://fonts.googleapis.com https://fonts.cdnfonts.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.cdnfonts.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.notwaiting.africa https://notwaiting-api-production.up.railway.app https://hcaptcha.com https://*.hcaptcha.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; frame-src https://hcaptcha.com https://*.hcaptcha.com https://www.youtube-nocookie.com https://www.youtube.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; worker-src 'self'"
 </IfModule>
 
 
