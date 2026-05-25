@@ -639,6 +639,19 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                   : t('signForm.verifyBodyNoStory', { email: verifyState.email })}
               </p>
               <p className="font-mono text-sm text-[#0C0C0A]/60">{t('signForm.verifyHint')}</p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => void handleResendVerification()}
+                  disabled={resendState === 'sending' || resendState === 'sent'}
+                  className="px-5 py-2.5 border-2 border-[#027A4F] text-[#027A4F] font-mono text-xs font-bold uppercase tracking-wide hover:bg-[#027A4F] hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {resendState === 'sending' && t('signForm.resendSending')}
+                  {resendState === 'sent' && t('signForm.resendSent')}
+                  {resendState === 'failed' && t('signForm.resendFailed')}
+                  {resendState === 'idle' && t('signForm.resendVerification')}
+                </button>
+              </div>
             </div>
           ) : (
             <div

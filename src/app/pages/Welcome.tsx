@@ -114,7 +114,7 @@ export default function Welcome() {
             {t('welcome.invalidBody', { defaultValue: 'Sign the manifesto again and we’ll send you a fresh link.' })}
           </p>
           <button
-            onClick={() => navigate('/manifesto')}
+            onClick={() => navigate('/')}
             className="border-2 border-[#0C0C0A] px-8 py-3 font-bold uppercase tracking-wide hover:bg-[#0C0C0A] hover:text-white transition-colors"
           >
             {t('welcome.goToManifesto', { defaultValue: 'Sign the manifesto' })}

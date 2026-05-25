@@ -408,7 +408,7 @@ export const fr: Translations = {
     successBodyLine2: 'Obtenez la marque de la vague sur votre photo préférée ou partagez votre histoire sur les réseaux',
     verifyTitle: 'Consultez votre boîte de réception.',
     verifyEyebrow: 'Une dernière étape',
-    verifyBody: "Nous avons envoyé un lien de vérification à {{email}}. Cliquez dessus pour publier votre histoire et rejoindre la vague.",
+    verifyBody: "Nous avons envoyé un lien de vérification à {{email}}. Vérifiez pour publier votre histoire sur le mur des histoires et rejoindre la vague.",
     verifyBodyNoStory: "Nous avons envoyé un lien de vérification à {{email}}. Cliquez dessus pour confirmer votre e-mail et rejoindre la vague.",
     verifyHint: "Vous ne l'avez pas reçu ? Vérifiez vos spams ou renvoyez-le ci-dessous.",
     getWaveMark: 'Obtenir la marque de la vague →',
