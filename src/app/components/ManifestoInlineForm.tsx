@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { signManifesto } from '../utils/api';
 import { Honeypot } from './Honeypot';
-import { Captcha, isCaptchaEnabled } from './Captcha';
+import { Captcha, isCaptchaEnabled, type CaptchaHandle } from './Captcha';
 import { useLocalizedCountriesWithPlaceholder } from '../i18n/hooks';
 import { formatSubmitError } from '../utils/submitError';
 import {
@@ -24,6 +24,15 @@ export function ManifestoInlineForm() {
   const [errorKind, setErrorKind] = useState<'none' | 'captcha' | 'network' | 'other'>('none')
   const [fieldErrors, setFieldErrors] = useState<ValidationErrors<ManifestoField>>({})
   const [signed, setSigned] = useState(false)
+  const captchaRef = useRef<CaptchaHandle>(null)
+
+  // Clear any previously-issued hCaptcha token and ask the widget to show a
+  // fresh challenge. Called after every failed submit so the user isn't
+  // stuck re-sending a stale (single-use) token on retry.
+  const resetCaptcha = () => {
+    setCaptchaToken('')
+    captchaRef.current?.reset()
+  }
 
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }))
@@ -68,6 +77,7 @@ export function ManifestoInlineForm() {
       const info = formatSubmitError(err, t, 'inlineForm.genericError')
       setError(info.message)
       setErrorKind(info.retryable ? 'network' : 'other')
+      resetCaptcha()
     } finally {
       setLoading(false)
     }
@@ -215,6 +225,7 @@ export function ManifestoInlineForm() {
       )}
 
       <Captcha
+        ref={captchaRef}
         onToken={setCaptchaToken}
         onError={() => setCaptchaToken('')}
         className="mt-2"
