@@ -110,6 +110,16 @@ export async function claimSignerSession(payload: { signerId: string; token: str
   return res
 }
 
+// Trigger a fresh verification email for a signer who has a stored signerId
+// but lost their session cookie (so /api/stories returns 401). The server
+// always responds 200 — we can't distinguish "sent" from "no such signer".
+export async function resendVerificationEmail(signerId: string) {
+  return request<{ success: true }>('/api/manifesto/resend-verification', {
+    method: 'POST',
+    body: JSON.stringify({ signerId }),
+  })
+}
+
 export async function getSignerCount() {
   return request<{ total_signers: number; total_countries: number }>('/api/manifesto/count')
 }
