@@ -120,102 +120,75 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       }
     }
 
-    // Tries the OS-level share sheet first via the Web Share API. When the
-    // user picks LinkedIn / Facebook / Instagram / WhatsApp etc. from the
-    // sheet, the receiving APP reads both `text` and `url` from the share
-    // intent — bypassing the text-stripping restrictions on those
-    // platforms' web share URLs. If Web Share isn't available (mostly
-    // desktop), we fall back to the legacy copy-clipboard + open-URL flow.
+    // Opens the platform window after the share modal's Continue button.
+    // Web Share API was tried earlier but iOS LinkedIn / Facebook /
+    // Instagram apps discard the `text` field when a `url` is present in
+    // the share intent (they categorize it as a link share and use URL
+    // preview only). Result: story stripped. We standardized on
+    // copy-to-clipboard + open-platform-URL for all devices so the story
+    // always lands somewhere the user can paste into.
     //
-    // ORDER MATTERS in the fallback: clipboard must be written BEFORE
-    // window.open because the new tab steals focus and modern browsers
-    // silently reject clipboard writes from an unfocused document. We use
+    // ORDER MATTERS: clipboard write must happen BEFORE window.open. The
+    // new tab steals focus and modern browsers silently reject
+    // navigator.clipboard.writeText() from an unfocused document. We use
     // the project's copyToClipboard helper (synchronous, execCommand-based)
-    // since it doesn't need document focus.
-    const executeShare = async (platform: SharePlatform, shareText: string) => {
-      const shareData: ShareData = {
-        title: '#NotWaiting',
-        text: shareText,
-        url: window.location.origin,
-      }
-      const canWebShare =
-        typeof navigator.share === 'function' &&
-        (typeof navigator.canShare !== 'function' || navigator.canShare(shareData))
-      if (canWebShare) {
-        try {
-          await navigator.share(shareData)
-          return
-        } catch (err) {
-          // User dismissed the share sheet — don't fall back, just exit.
-          if ((err as DOMException)?.name === 'AbortError') return
-          // For any other error (rare), fall through to the legacy path.
-        }
-      }
-
-      // Legacy desktop fallback.
+    // because it doesn't need document focus.
+    const executeShare = (platform: SharePlatform, shareText: string) => {
       if (platform !== 'twitter') {
         void copyToClipboard(shareText)
       }
       switch (platform) {
         case 'twitter':
-          // X still accepts pre-filled text in the URL — no paste step needed.
+          // X's intent URL takes only `text` — no URL parameter is sent, so
+          // the shared post is just the story + hashtag.
           window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer')
           break
         case 'linkedin':
-          // LinkedIn's share-offsite endpoint only takes `url`; story text
-          // must be pasted into the composer.
-          window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`, '_blank', 'noopener,noreferrer')
+          // `?shareActive=true` opens LinkedIn's post-composer modal
+          // directly (same as clicking "Start a post" on the feed). Avoids
+          // share-offsite, which requires a `url` param that would
+          // auto-embed the link in the post.
+          window.open('https://www.linkedin.com/feed/?shareActive=true', '_blank', 'noopener,noreferrer')
           break
         case 'facebook':
-          // Facebook's sharer.php only takes `u`; the `quote` param is
-          // whitelisted to FB-approved apps so we can't rely on it.
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`, '_blank', 'noopener,noreferrer')
+          // Facebook has no public composer-only URL — sharer.php requires
+          // `u=` (which would auto-embed the link). Open the home feed;
+          // the "What's on your mind?" entry is right at the top.
+          window.open('https://www.facebook.com/', '_blank', 'noopener,noreferrer')
           break
         case 'instagram':
-          // Instagram has no web share URL — open the site (mobile browsers
-          // surface "Open in app" prompts) so the user lands on a page where
-          // they can start a new post and paste the caption.
+          // Instagram has no web composer; opening the site surfaces the
+          // "Open in app" prompt on mobile. User pastes the caption.
           window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')
           break
       }
     }
 
-    // Queues a share. When the Web Share API is available (mostly mobile),
-    // the OS share sheet IS the confirmation step and the receiving app
-    // gets text + URL — so we skip the explanatory modal entirely. On
-    // desktop (no Web Share), the modal shows first, explaining the
-    // copy-and-paste flow before the platform URL is opened.
+    // Queues a share — the modal appears first explaining the copy-and-paste
+    // flow, then on Continue the clipboard is written and the platform URL
+    // is opened. We use this on both mobile and desktop: Web Share API was
+    // tested but iOS LinkedIn/Facebook/Instagram apps strip the story text
+    // when sharing through their share extensions, so copy-and-paste is the
+    // only reliable cross-device path.
     const requestShare = (
       platform: SharePlatform,
       shareText: string,
       options: { signerIdForTracking?: string; trackingSource: string; afterShare?: () => void } = { trackingSource: 'manual_manifesto' },
     ) => {
-      const doShare = () => {
-        void executeShare(platform, shareText)
-        if (options.signerIdForTracking) {
-          void trackAction({
-            signerId: options.signerIdForTracking,
-            action: 'shared_social',
-            metadata: { platform, source: options.trackingSource },
-          })
-        }
-        options.afterShare?.()
-      }
-
-      const shareData: ShareData = {
-        title: '#NotWaiting',
-        text: shareText,
-        url: window.location.origin,
-      }
-      const canWebShare =
-        typeof navigator.share === 'function' &&
-        (typeof navigator.canShare !== 'function' || navigator.canShare(shareData))
-
-      if (canWebShare) {
-        doShare()
-      } else {
-        setPendingShare({ platform, onContinue: doShare })
-      }
+      setPendingShare({
+        platform,
+        onContinue: () => {
+          executeShare(platform, shareText)
+          if (options.signerIdForTracking) {
+            void trackAction({
+              signerId: options.signerIdForTracking,
+              action: 'shared_social',
+              metadata: { platform, source: options.trackingSource },
+            })
+          }
+          options.afterShare?.()
+        },
+      })
     }
 
     const handleShare = async (intent: ShareIntent) => {
