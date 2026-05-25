@@ -134,7 +134,7 @@ export const en = {
     campaignAlt: '#NotWaiting campaign {{n}}',
   },
   home: {
-    manifestoTitle: 'The Manifesto',
+    manifestoTitle: 'Sign the Manifesto',
     manifestoStatsUsersSuffix: 'users in',
     manifestoStatsCountriesSuffix: 'countries have signed the manifesto',
     manifestoP1Line1: 'I believe in my country and I believe in Africa.',
@@ -363,7 +363,7 @@ export const en = {
     signedTitle: "You've signed the manifesto, {{name}}.",
     signedBody: 'Welcome to the wave. #NotWaiting',
     successTitle: "You're now on the wave, {{name}}.",
-    successBody: 'Welcome to the movement. Check your inbox for confirmation, continue to join the movement or get the wave mark.',
+    successBody: 'We have sent you a verification email — verify to join the movement, publish your story and get the wave mark.',
     genericError: 'Something went wrong. Please try again.',
     captchaRequired: 'Please complete the captcha challenge.',
   },

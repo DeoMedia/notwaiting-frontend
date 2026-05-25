@@ -137,7 +137,7 @@ export const fr: Translations = {
     campaignAlt: 'Campagne #NotWaiting {{n}}',
   },
   home: {
-    manifestoTitle: 'Le manifeste',
+    manifestoTitle: 'Signez le manifeste',
     manifestoStatsUsersSuffix: 'personnes dans',
     manifestoStatsCountriesSuffix: 'pays ont signé le manifeste',
     manifestoP1Line1: "Je crois en mon pays et je crois en l'Afrique.",
@@ -366,7 +366,7 @@ export const fr: Translations = {
     signedTitle: 'Vous avez signé le manifeste, {{name}}.',
     signedBody: 'Bienvenue dans la vague. #NotWaiting',
     successTitle: 'Vous êtes maintenant sur la vague, {{name}}.',
-    successBody: 'Bienvenue dans le mouvement. Vérifiez votre boîte de réception pour la confirmation, continuez à rejoindre le mouvement ou obtenez la marque de la vague.',
+    successBody: "Nous vous avons envoyé un e-mail de vérification — vérifiez pour rejoindre le mouvement, publier votre histoire et obtenir la marque de la vague.",
     genericError: "Une erreur s'est produite. Veuillez réessayer.",
     captchaRequired: 'Veuillez compléter le défi captcha.',
   },
