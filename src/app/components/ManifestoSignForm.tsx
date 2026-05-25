@@ -1,4 +1,4 @@
-import { useState, forwardRef, useEffect } from 'react';
+import { useState, useRef, forwardRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
@@ -6,7 +6,7 @@ import { Input } from './Input';
 import { Textarea } from './Textarea';
 import { signManifesto, publishStory, trackAction, getStoredSignerId } from '../utils/api';
 import { Honeypot } from './Honeypot';
-import { Captcha, isCaptchaEnabled } from './Captcha';
+import { Captcha, isCaptchaEnabled, type CaptchaHandle } from './Captcha';
 import { formatSubmitError } from '../utils/submitError';
 import { copyToClipboard } from '../utils/clipboard';
 import { SocialShareModal, type SharePlatform } from './SocialShareModal';
@@ -62,6 +62,15 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const [showAiHelper, setShowAiHelper] = useState(false)
     const [honeypot, setHoneypot]       = useState('')
     const [captchaToken, setCaptchaToken] = useState('')
+    const captchaRef = useRef<CaptchaHandle>(null)
+
+    // Clear any previously-issued hCaptcha token and ask the widget to show
+    // a fresh challenge. Called after every failed submit so the user isn't
+    // stuck re-sending a stale (single-use) token on retry.
+    const resetCaptcha = () => {
+      setCaptchaToken('')
+      captchaRef.current?.reset()
+    }
 
     // Clear stale story-empty error as soon as the story field has content
     useEffect(() => {
@@ -111,17 +120,39 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       }
     }
 
-    // Actually opens the platform window. Called from the share modal's
-    // Continue button — never directly, so the user always sees the
-    // "paste your story" instructions first.
+    // Tries the OS-level share sheet first via the Web Share API. When the
+    // user picks LinkedIn / Facebook / Instagram / WhatsApp etc. from the
+    // sheet, the receiving APP reads both `text` and `url` from the share
+    // intent — bypassing the text-stripping restrictions on those
+    // platforms' web share URLs. If Web Share isn't available (mostly
+    // desktop), we fall back to the legacy copy-clipboard + open-URL flow.
     //
-    // ORDER MATTERS: clipboard write must happen BEFORE window.open. The
-    // new tab steals focus and modern browsers silently reject
-    // navigator.clipboard.writeText() from an unfocused document. We use
+    // ORDER MATTERS in the fallback: clipboard must be written BEFORE
+    // window.open because the new tab steals focus and modern browsers
+    // silently reject clipboard writes from an unfocused document. We use
     // the project's copyToClipboard helper (synchronous, execCommand-based)
-    // because it doesn't need document focus and runs before the user
-    // gesture is consumed by window.open.
-    const executeShare = (platform: SharePlatform, shareText: string) => {
+    // since it doesn't need document focus.
+    const executeShare = async (platform: SharePlatform, shareText: string) => {
+      const shareData: ShareData = {
+        title: '#NotWaiting',
+        text: shareText,
+        url: window.location.origin,
+      }
+      const canWebShare =
+        typeof navigator.share === 'function' &&
+        (typeof navigator.canShare !== 'function' || navigator.canShare(shareData))
+      if (canWebShare) {
+        try {
+          await navigator.share(shareData)
+          return
+        } catch (err) {
+          // User dismissed the share sheet — don't fall back, just exit.
+          if ((err as DOMException)?.name === 'AbortError') return
+          // For any other error (rare), fall through to the legacy path.
+        }
+      }
+
+      // Legacy desktop fallback.
       if (platform !== 'twitter') {
         void copyToClipboard(shareText)
       }
@@ -149,29 +180,42 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       }
     }
 
-    // Queues a share — the modal appears first explaining what's about to
-    // happen. `afterShare` runs after the user confirms and the platform
-    // window has been opened (used by the form path to transition to the
-    // success screen).
+    // Queues a share. When the Web Share API is available (mostly mobile),
+    // the OS share sheet IS the confirmation step and the receiving app
+    // gets text + URL — so we skip the explanatory modal entirely. On
+    // desktop (no Web Share), the modal shows first, explaining the
+    // copy-and-paste flow before the platform URL is opened.
     const requestShare = (
       platform: SharePlatform,
       shareText: string,
       options: { signerIdForTracking?: string; trackingSource: string; afterShare?: () => void } = { trackingSource: 'manual_manifesto' },
     ) => {
-      setPendingShare({
-        platform,
-        onContinue: () => {
-          executeShare(platform, shareText)
-          if (options.signerIdForTracking) {
-            void trackAction({
-              signerId: options.signerIdForTracking,
-              action: 'shared_social',
-              metadata: { platform, source: options.trackingSource },
-            })
-          }
-          options.afterShare?.()
-        },
-      })
+      const doShare = () => {
+        void executeShare(platform, shareText)
+        if (options.signerIdForTracking) {
+          void trackAction({
+            signerId: options.signerIdForTracking,
+            action: 'shared_social',
+            metadata: { platform, source: options.trackingSource },
+          })
+        }
+        options.afterShare?.()
+      }
+
+      const shareData: ShareData = {
+        title: '#NotWaiting',
+        text: shareText,
+        url: window.location.origin,
+      }
+      const canWebShare =
+        typeof navigator.share === 'function' &&
+        (typeof navigator.canShare !== 'function' || navigator.canShare(shareData))
+
+      if (canWebShare) {
+        doShare()
+      } else {
+        setPendingShare({ platform, onContinue: doShare })
+      }
     }
 
     const handleShare = async (intent: ShareIntent) => {
@@ -280,6 +324,7 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
         setError(info.message)
         setErrorKind(info.retryable ? 'network' : 'other')
         setRetryableIntent(info.retryable ? intent : null)
+        resetCaptcha()
       } finally {
         setLoading(false)
         setActiveIntent(null)
@@ -469,6 +514,7 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                   </div>
 
                   <Captcha
+                    ref={captchaRef}
                     onToken={setCaptchaToken}
                     onError={() => setCaptchaToken('')}
                   />

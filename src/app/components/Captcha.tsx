@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 // hCaptcha widget — issues a one-time captchaToken that the backend
 // re-verifies against api.hcaptcha.com using HCAPTCHA_SECRET.
@@ -82,8 +82,16 @@ interface CaptchaProps {
   theme?: 'light' | 'dark'
 }
 
-export function Captcha({ onToken, onError, className, theme = 'light' }: CaptchaProps) {
-  const ref = useRef<HTMLDivElement>(null)
+export interface CaptchaHandle {
+  /** Clears the widget and issues a fresh challenge for the user to solve. */
+  reset: () => void
+}
+
+export const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(function Captcha(
+  { onToken, onError, className, theme = 'light' },
+  ref,
+) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
   // Keep the latest handlers in refs so re-renders don't tear down the widget.
   const onTokenRef = useRef(onToken)
@@ -91,15 +99,28 @@ export function Captcha({ onToken, onError, className, theme = 'light' }: Captch
   onTokenRef.current = onToken
   onErrorRef.current = onError
 
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      if (widgetIdRef.current && window.hcaptcha) {
+        try {
+          window.hcaptcha.reset(widgetIdRef.current)
+        } catch {
+          // Widget gone — silently ignore. The token state on the form is
+          // already being cleared by the caller.
+        }
+      }
+    },
+  }), [])
+
   useEffect(() => {
-    if (!SITE_KEY || !ref.current) return
+    if (!SITE_KEY || !containerRef.current) return
     let cancelled = false
     let mounted = false
 
     loadScript()
       .then(() => {
-        if (cancelled || !ref.current || !window.hcaptcha) return
-        widgetIdRef.current = window.hcaptcha.render(ref.current, {
+        if (cancelled || !containerRef.current || !window.hcaptcha) return
+        widgetIdRef.current = window.hcaptcha.render(containerRef.current, {
           sitekey: SITE_KEY,
           theme,
           callback: (token) => onTokenRef.current(token),
@@ -124,8 +145,8 @@ export function Captcha({ onToken, onError, className, theme = 'light' }: Captch
   }, [theme])
 
   if (!SITE_KEY) return null
-  return <div ref={ref} className={className} />
-}
+  return <div ref={containerRef} className={className} />
+})
 
 export function isCaptchaEnabled(): boolean {
   return Boolean(SITE_KEY)

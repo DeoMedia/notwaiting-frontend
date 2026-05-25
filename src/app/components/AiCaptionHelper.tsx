@@ -107,8 +107,40 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
       setTimeout(() => setCopied(false), 2000)
     }
 
-    const shareOnPlatform = (platform: SharePlatform) => {
+    const shareOnPlatform = async (platform: SharePlatform) => {
       const text = `${currentText}\n\n#NotWaiting`
+      const shareData: ShareData = {
+        title: '#NotWaiting',
+        text,
+        url: window.location.origin,
+      }
+
+      const trackShare = () => {
+        if (signerId) {
+          trackAction({ signerId, action: 'shared_social', metadata: { platform } })
+        }
+      }
+
+      // Web Share API (mobile-first): the receiving app reads text + URL
+      // from the OS share intent, so LinkedIn/Facebook/Instagram apps
+      // actually receive the caption — bypassing their web-URL text
+      // restrictions. No modal needed; the share sheet is the confirmation.
+      const canWebShare =
+        typeof navigator.share === 'function' &&
+        (typeof navigator.canShare !== 'function' || navigator.canShare(shareData))
+      if (canWebShare) {
+        try {
+          await navigator.share(shareData)
+          trackShare()
+          return
+        } catch (err) {
+          // User dismissed the share sheet — stop here (no fallback).
+          if ((err as DOMException)?.name === 'AbortError') return
+          // Other error → fall through to the legacy modal flow below.
+        }
+      }
+
+      // Desktop fallback: show the explanatory modal, then copy and open.
       const openUrl = (() => {
         switch (platform) {
           case 'twitter':
@@ -130,9 +162,7 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
             void copyToClipboard(text)
           }
           window.open(openUrl, '_blank', 'noopener,noreferrer')
-          if (signerId) {
-            trackAction({ signerId, action: 'shared_social', metadata: { platform } })
-          }
+          trackShare()
         },
       })
     }
