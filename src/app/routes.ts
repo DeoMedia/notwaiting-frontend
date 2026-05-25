@@ -22,13 +22,6 @@ const FAQ           = lazy(() => import('./pages/FAQ'));
 const Privacy       = lazy(() => import('./pages/Privacy'));
 const AiPrompt      = lazy(() => import('./pages/AiPrompt'));
 const Welcome       = lazy(() => import('./pages/Welcome'));
-const EmailPreview  = lazy(() => import('./pages/EmailPreview'));
-
-// /email-preview renders the same HTML the API emails out, including the
-// `?name=…` URL param. It is a development/debug surface — keeping it
-// reachable in production exposes the template internals (file paths,
-// DOM structure) and gives phishers a perfectly-branded screenshot tool.
-const isDev = import.meta.env.DEV;
 
 export const router = createBrowserRouter([
   {
@@ -52,7 +45,4 @@ export const router = createBrowserRouter([
     path: '/get-mark',
     Component: GetMark
   },
-  ...(isDev
-    ? [{ path: '/email-preview', Component: EmailPreview }]
-    : []),
 ]);

@@ -248,7 +248,6 @@ export default function Home() {
                 <div className="flex-1 bg-[#EBBD06]" />
                 <div className="flex-1 bg-[#027A4F]" />
               </div>
-              <p className="text-xl md:text-2xl font-bold leading-relaxed">{t('home.signCta')}</p>
               <ManifestoInlineForm />
             </div>
           </div>
