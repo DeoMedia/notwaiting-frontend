@@ -7,6 +7,7 @@ import {
   publishStory,
   trackAction,
   fetchDashboard,
+  createAdminSession,
 } from '../app/utils/api'
 
 // Mock global fetch for all tests
@@ -272,6 +273,22 @@ describe('fetchDashboard', () => {
     mockFetch.mockReturnValue(mockError(401, { error: 'Unauthorized' }))
 
     await expect(fetchDashboard()).rejects.toThrow('Unauthorized')
+  })
+})
+
+describe('createAdminSession', () => {
+  beforeEach(() => mockFetch.mockClear())
+
+  it('POSTs admin credentials to the backend session endpoint', async () => {
+    mockFetch.mockReturnValue(mockOk({ success: true, role: 'super_admin', email: 'admin@test.com', expiresInSeconds: 3600 }))
+
+    await createAdminSession({ email: 'admin@test.com', password: 'secret' })
+
+    const [url, opts] = mockFetch.mock.calls[0]
+    expect(url).toContain('/api/admin/session')
+    expect(opts.method).toBe('POST')
+    expect(opts.credentials).toBe('include')
+    expect(JSON.parse(opts.body)).toEqual({ email: 'admin@test.com', password: 'secret' })
   })
 })
 

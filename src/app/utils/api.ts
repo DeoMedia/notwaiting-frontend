@@ -191,15 +191,14 @@ export async function submitContact(payload: {
 }
 
 // ── Admin session ─────────────────────────────────────────────
-// Exchange a Supabase access token for an HttpOnly admin session cookie.
-// After this returns, /api/admin/* requests authorise via the cookie alone
-// and the Supabase token can be dropped.
-export async function createAdminSession(accessToken: string) {
+// Admin authentication goes through the backend only. The API validates the
+// credentials server-side and returns an HttpOnly session cookie.
+export async function createAdminSession(payload: { email: string; password: string }) {
   return request<{ success: boolean; role: string; email: string | null; expiresInSeconds: number }>(
     '/api/admin/session',
     {
       method: 'POST',
-      body: JSON.stringify({ accessToken }),
+      body: JSON.stringify(payload),
     },
   )
 }

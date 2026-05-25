@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../../lib/supabaseClient';
 import {
   fetchDashboard,
   createAdminSession,
@@ -113,28 +112,15 @@ export default function Dashboard() {
     setLoading(true);
     setError('');
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      await createAdminSession({
         email: email.trim(),
         password,
       });
 
-      if (authError || !authData.session) {
-        setError(authError?.message ?? t('dashboard.signInFailed'));
-        return;
-      }
-
-      // Hand the Supabase access token to our API so it can mint an HttpOnly
-      // session cookie. The JWT itself is then dropped — supabaseClient is
-      // configured with persistSession:false, so nothing ever touches storage.
-      try {
-        await createAdminSession(authData.session.access_token);
-      } catch (err: any) {
-        setError(err?.message ?? t('dashboard.signInFailed'));
-        return;
-      }
-
       setAuthed(true);
       await loadData();
+    } catch (err: any) {
+      setError(err?.message ?? t('dashboard.signInFailed'));
     } finally {
       setLoading(false);
     }
