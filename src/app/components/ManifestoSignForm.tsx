@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Textarea } from './Textarea';
-import { signManifesto, publishStory, trackAction, getStoredSignerId } from '../utils/api';
+import { signManifesto, publishStory, trackAction, getStoredSignerId, resendVerificationEmail } from '../utils/api';
 import { Honeypot } from './Honeypot';
 import { Captcha, isCaptchaEnabled, type CaptchaHandle } from './Captcha';
 import { formatSubmitError } from '../utils/submitError';
@@ -45,7 +45,8 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const [showShareOptions, setShowShareOptions] = useState(false)
     const [error, setError]             = useState('')
     const [retryableIntent, setRetryableIntent] = useState<ShareIntent | null>(null)
-    const [errorKind, setErrorKind]     = useState<'none' | 'info' | 'captcha' | 'network' | 'other'>('none')
+    const [errorKind, setErrorKind]     = useState<'none' | 'info' | 'captcha' | 'network' | 'verification' | 'other'>('none')
+    const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
     // Pending share — we show the modal first and only open the platform when
     // the user clicks Continue. The callback captures everything that should
     // happen on confirmation (window.open, clipboard, tracking, post-share
@@ -191,10 +192,25 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       })
     }
 
+    const handleResendVerification = async () => {
+      const signerIdForResend = getStoredSignerId()
+      if (!signerIdForResend || resendState === 'sending') return
+      setResendState('sending')
+      try {
+        await resendVerificationEmail(signerIdForResend)
+        setResendState('sent')
+      } catch {
+        // Server-side rate limit (3/hour) is the realistic failure mode.
+        // Reuse the existing 'failed' state — the button copy reflects it.
+        setResendState('failed')
+      }
+    }
+
     const handleShare = async (intent: ShareIntent) => {
       setError('')
       setErrorKind('none')
       setRetryableIntent(null)
+      setResendState('idle')
 
       if (!runValidation()) return
 
@@ -253,27 +269,29 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
           return
         }
 
-        // First-time signer in this tab. The /api/manifesto endpoint:
-        //   1. Creates the signer (or finds the existing one — both paths
-        //      return identical 200, anti-enumeration is preserved).
-        //   2. Creates the story inline when caption + waveTag are present.
-        //   3. Emails a magic link the user clicks to unlock further actions
-        //      (the `nw_signer` cookie is set by /api/manifesto/claim).
-        // We don't get a signerId back, by design. The user still sees the
-        // "You're now on the wave" success screen immediately. Any further
-        // story posting / mark download requires them to click the email
-        // magic link in a new tab to claim a session.
+        // First-time signer in this tab. /api/manifesto now only signs —
+        // stories are exclusively created via cookie-gated /api/stories so
+        // an unverified email can never publish. We stash the typed story
+        // in sessionStorage and Welcome.tsx auto-posts it after the magic
+        // link is claimed.
+        const trimmedStory = formData.story.trim()
         await signManifesto({
           firstName: formData.firstName,
           country: formData.country,
           email: formData.email,
           wave: effectiveWave || undefined,
-          caption: formData.story.trim(),
-          waveTag: storyWaveTag,
           company: honeypot,
           captchaToken: captchaToken || undefined,
         })
-        try { sessionStorage.setItem('nw_first_name', formData.firstName) } catch {}
+        try {
+          sessionStorage.setItem('nw_first_name', formData.firstName)
+          if (trimmedStory) {
+            sessionStorage.setItem(
+              'nw_pending_story',
+              JSON.stringify({ caption: trimmedStory, waveTag: storyWaveTag }),
+            )
+          }
+        } catch { /* ignore quota / privacy-mode errors */ }
 
         const transitionToSuccess = () => {
           setIsLeaving(true)
@@ -295,8 +313,17 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       } catch (err: unknown) {
         const info = formatSubmitError(err, t, 'signForm.genericError')
         setError(info.message)
-        setErrorKind(info.retryable ? 'network' : 'other')
-        setRetryableIntent(info.retryable ? intent : null)
+        if (info.status === 401 && getStoredSignerId()) {
+          // Unverified-email branch: the cookie is missing/expired, so the
+          // server rejected the story write. Offer to resend the magic-link
+          // email instead of asking the user to fill the form again.
+          setErrorKind('verification')
+          setResendState('idle')
+          setRetryableIntent(null)
+        } else {
+          setErrorKind(info.retryable ? 'network' : 'other')
+          setRetryableIntent(info.retryable ? intent : null)
+        }
         resetCaptcha()
       } finally {
         setLoading(false)
@@ -571,6 +598,19 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                             className="mt-2 px-3 py-1.5 border-2 border-[#DD3935] text-[#DD3935] font-mono text-xs font-bold uppercase tracking-wide hover:bg-[#DD3935] hover:text-white transition-colors disabled:opacity-50"
                           >
                             {loading ? t('inlineForm.signing') : t('common.tryAgain')}
+                          </button>
+                        )}
+                        {errorKind === 'verification' && (
+                          <button
+                            type="button"
+                            onClick={() => void handleResendVerification()}
+                            disabled={resendState === 'sending' || resendState === 'sent'}
+                            className="mt-2 px-3 py-1.5 border-2 border-[#027A4F] text-[#027A4F] font-mono text-xs font-bold uppercase tracking-wide hover:bg-[#027A4F] hover:text-white transition-colors disabled:opacity-60"
+                          >
+                            {resendState === 'sending' && t('signForm.resendSending')}
+                            {resendState === 'sent' && t('signForm.resendSent')}
+                            {resendState === 'failed' && t('signForm.resendFailed')}
+                            {resendState === 'idle' && t('signForm.resendVerification')}
                           </button>
                         )}
                       </div>

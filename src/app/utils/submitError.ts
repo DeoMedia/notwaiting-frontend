@@ -12,6 +12,8 @@ import { ApiError } from './api'
 export interface SubmitErrorInfo {
   message: string
   retryable: boolean
+  /** HTTP status when the error originated from ApiError; undefined otherwise. */
+  status?: number
 }
 
 const NETWORK_ERROR_HINTS = [
@@ -45,5 +47,6 @@ export function formatSubmitError(err: unknown, t: TFunction, fallbackKey: strin
   return {
     message: msg || t(fallbackKey, { defaultValue: 'Something went wrong. Please try again.' }),
     retryable: false,
+    status: err instanceof ApiError ? err.status : undefined,
   }
 }

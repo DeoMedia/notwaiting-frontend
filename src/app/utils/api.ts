@@ -79,10 +79,6 @@ export async function signManifesto(payload: {
   country: string
   email: string
   wave?: string
-  /** Optional inline story posted atomically with the signup. */
-  caption?: string
-  /** Required when `caption` is set. Must be a known wave tag. */
-  waveTag?: string
   newsletterOptIn?: boolean
   /** Honeypot — must remain empty for real users. */
   company?: string
@@ -108,6 +104,16 @@ export async function claimSignerSession(payload: { signerId: string; token: str
   )
   storeSignerCredentials(res.signerId)
   return res
+}
+
+// Trigger a fresh verification email for a signer who has a stored signerId
+// but lost their session cookie (so /api/stories returns 401). The server
+// always responds 200 — we can't distinguish "sent" from "no such signer".
+export async function resendVerificationEmail(signerId: string) {
+  return request<{ success: true }>('/api/manifesto/resend-verification', {
+    method: 'POST',
+    body: JSON.stringify({ signerId }),
+  })
 }
 
 export async function getSignerCount() {
