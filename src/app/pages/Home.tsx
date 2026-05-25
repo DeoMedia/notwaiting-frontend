@@ -15,7 +15,7 @@ import heroMobile1 from '../../styles/PhoneLandingmobile-01.webp';
 // import heroMobile3 from '../../styles/PhoneLandingmobile-03.webp';
 import heroMobile4 from '../../styles/PhoneLandingmobile-04.webp';
 import patternBg2 from '../../imports/PATTERN_1-1.png';
-import waveMarkExample from '../../imports/image-2.png';
+import waveMarkExample from '../../styles/wave_mark_sample.jpeg';
 import { useNavigate } from 'react-router';
 import { getSignerCount } from '../utils/api';
 
