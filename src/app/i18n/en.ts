@@ -17,6 +17,7 @@ export const en = {
     nextShort: 'Next →',
     loadingDots: 'Loading...',
     cancel: 'Cancel',
+    networkError: 'Network problem — check your connection and try again.',
   },
   language: {
     label: 'Language',
@@ -364,6 +365,7 @@ export const en = {
     successTitle: "You're now on the wave, {{name}}.",
     successBody: 'Welcome to the movement. Check your inbox for confirmation, continue to join the movement or get the wave mark.',
     genericError: 'Something went wrong. Please try again.',
+    captchaRequired: 'Please complete the captcha challenge.',
   },
   signForm: {
     title: 'Add Your Wave.',
@@ -408,10 +410,23 @@ export const en = {
     copyForInstagram: 'Copy for Instagram →',
     pleaseComplete: 'Please complete the form.',
     genericError: 'Something went wrong. Please try again.',
+    captchaRequired: 'Please complete the captcha challenge.',
     manualShareText: 'I just joined #NotWaiting — the movement for African builders, creators, and innovators. Africa is on a wave.',
     storyCopiedLinkedIn: 'Story copied. LinkedIn opened — paste your story into the post.',
     storyCopiedFacebook: 'Story copied. Facebook opened — paste your story into the post.',
     storyCopiedInstagram: 'Story copied. You can now paste it on Instagram.',
+  },
+  share: {
+    modal: {
+      title: 'Almost there',
+      bodyCopied: 'Your story has been copied. Click Continue to open {{platform}}, then paste it into the post window.',
+      bodyPrefilled: 'Your story is ready to post on {{platform}}. Click Continue to open the post window — your story will be pre-filled.',
+      step1: '{{platform}} opens in a new tab.',
+      step2: 'Start a new post and paste your story (Cmd / Ctrl + V, or long-press → Paste).',
+      step3: 'Publish — done.',
+      continue: 'Continue to {{platform}} →',
+      cancel: 'Cancel',
+    },
   },
   aiQuestionnaire: {
     q1: 'What are you building, creating, or changing?',

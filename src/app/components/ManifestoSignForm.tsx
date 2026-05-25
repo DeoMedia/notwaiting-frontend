@@ -7,6 +7,9 @@ import { Textarea } from './Textarea';
 import { signManifesto, publishStory, trackAction, getStoredSignerId } from '../utils/api';
 import { Honeypot } from './Honeypot';
 import { Captcha, isCaptchaEnabled } from './Captcha';
+import { formatSubmitError } from '../utils/submitError';
+import { copyToClipboard } from '../utils/clipboard';
+import { SocialShareModal, type SharePlatform } from './SocialShareModal';
 import waveImage from '../../imports/waves.png';
 import { AiStoryQuestionnaire } from './AiStoryQuestionnaire';
 import { useLocalizedCountriesWithPlaceholder, useLocalizedSectors } from '../i18n/hooks';
@@ -41,6 +44,16 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const [activeIntent, setActiveIntent] = useState<ShareIntent | null>(null)
     const [showShareOptions, setShowShareOptions] = useState(false)
     const [error, setError]             = useState('')
+    const [retryableIntent, setRetryableIntent] = useState<ShareIntent | null>(null)
+    const [errorKind, setErrorKind]     = useState<'none' | 'info' | 'captcha' | 'network' | 'other'>('none')
+    // Pending share — we show the modal first and only open the platform when
+    // the user clicks Continue. The callback captures everything that should
+    // happen on confirmation (window.open, clipboard, tracking, post-share
+    // transitions) so each call site can supply its own follow-up actions.
+    const [pendingShare, setPendingShare] = useState<{
+      platform: SharePlatform
+      onContinue: () => void
+    } | null>(null)
     const [fieldErrors, setFieldErrors] = useState<ValidationErrors<ManifestoField>>({})
     const [submitted, setSubmitted]     = useState(false)
     const [isLeaving, setIsLeaving]     = useState(false)
@@ -53,7 +66,10 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     // Clear stale story-empty error as soon as the story field has content
     useEffect(() => {
       if (formData.story.trim()) {
-        if (error === t('validation.storyRequired')) setError('')
+        if (error === t('validation.storyRequired')) {
+          setError('')
+          setErrorKind('none')
+        }
       }
     }, [formData.story, error, t])
 
@@ -80,8 +96,10 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       setFieldErrors(result.errors)
       if (!result.valid) {
         setError(firstError(result.errors) ?? t('signForm.pleaseComplete'))
+        setErrorKind('other')
       } else {
         setError('')
+        setErrorKind('none')
       }
       return result.valid
     }
@@ -93,33 +111,73 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       }
     }
 
-    const openSocialShare = async (platform: Exclude<ShareIntent, 'wall'>, signerIdForTracking: string) => {
-      const shareText = getManualShareText()
-      const url = window.location.origin
+    // Actually opens the platform window. Called from the share modal's
+    // Continue button — never directly, so the user always sees the
+    // "paste your story" instructions first.
+    //
+    // ORDER MATTERS: clipboard write must happen BEFORE window.open. The
+    // new tab steals focus and modern browsers silently reject
+    // navigator.clipboard.writeText() from an unfocused document. We use
+    // the project's copyToClipboard helper (synchronous, execCommand-based)
+    // because it doesn't need document focus and runs before the user
+    // gesture is consumed by window.open.
+    const executeShare = (platform: SharePlatform, shareText: string) => {
+      if (platform !== 'twitter') {
+        void copyToClipboard(shareText)
+      }
       switch (platform) {
         case 'twitter':
+          // X still accepts pre-filled text in the URL — no paste step needed.
           window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer')
           break
         case 'linkedin':
-          window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
-          navigator.clipboard.writeText(shareText).catch(() => {})
-          setError(t('signForm.storyCopiedLinkedIn'))
+          // LinkedIn's share-offsite endpoint only takes `url`; story text
+          // must be pasted into the composer.
+          window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`, '_blank', 'noopener,noreferrer')
           break
         case 'facebook':
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
-          navigator.clipboard.writeText(shareText).catch(() => {})
-          setError(t('signForm.storyCopiedFacebook'))
+          // Facebook's sharer.php only takes `u`; the `quote` param is
+          // whitelisted to FB-approved apps so we can't rely on it.
+          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`, '_blank', 'noopener,noreferrer')
           break
         case 'instagram':
-          navigator.clipboard.writeText(shareText).catch(() => {})
-          setError(t('signForm.storyCopiedInstagram'))
+          // Instagram has no web share URL — open the site (mobile browsers
+          // surface "Open in app" prompts) so the user lands on a page where
+          // they can start a new post and paste the caption.
+          window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')
           break
       }
-      await trackAction({ signerId: signerIdForTracking, action: 'shared_social', metadata: { platform, source: 'manual_manifesto' } })
+    }
+
+    // Queues a share — the modal appears first explaining what's about to
+    // happen. `afterShare` runs after the user confirms and the platform
+    // window has been opened (used by the form path to transition to the
+    // success screen).
+    const requestShare = (
+      platform: SharePlatform,
+      shareText: string,
+      options: { signerIdForTracking?: string; trackingSource: string; afterShare?: () => void } = { trackingSource: 'manual_manifesto' },
+    ) => {
+      setPendingShare({
+        platform,
+        onContinue: () => {
+          executeShare(platform, shareText)
+          if (options.signerIdForTracking) {
+            void trackAction({
+              signerId: options.signerIdForTracking,
+              action: 'shared_social',
+              metadata: { platform, source: options.trackingSource },
+            })
+          }
+          options.afterShare?.()
+        },
+      })
     }
 
     const handleShare = async (intent: ShareIntent) => {
       setError('')
+      setErrorKind('none')
+      setRetryableIntent(null)
 
       if (!runValidation()) return
 
@@ -128,7 +186,8 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       // signer (already-claimed session in this tab) skips the captcha
       // because we go straight to publishStory under their cookie.
       if (isCaptchaEnabled() && !existingSignerId && !captchaToken) {
-        setError(t('signForm.captchaRequired') ?? 'Please complete the captcha challenge.')
+        setError(t('signForm.captchaRequired'))
+        setErrorKind('captcha')
         return
       }
 
@@ -156,14 +215,24 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
             metadata: { source: 'manual_manifesto', subject: formData.subject },
           })
 
-          if (intent !== 'wall') {
-            await openSocialShare(intent, existingSignerId)
+          setSignerId(existingSignerId)
+          const transitionToSuccess = () => {
+            setIsLeaving(true)
+            onSuccess(existingSignerId, formData.firstName)
+            setTimeout(() => setSubmitted(true), 350)
           }
 
-          setSignerId(existingSignerId)
-          setIsLeaving(true)
-          onSuccess(existingSignerId, formData.firstName)
-          setTimeout(() => setSubmitted(true), 350)
+          if (intent !== 'wall') {
+            // Show the share modal first; success transition fires after
+            // the user confirms and the platform window has been opened.
+            requestShare(intent, getManualShareText(), {
+              signerIdForTracking: existingSignerId,
+              trackingSource: 'manual_manifesto',
+              afterShare: transitionToSuccess,
+            })
+          } else {
+            transitionToSuccess()
+          }
           return
         }
 
@@ -189,39 +258,28 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
         })
         try { sessionStorage.setItem('nw_first_name', formData.firstName) } catch {}
 
-        // Open the chosen social share window immediately so the user gets
-        // the response they expected from clicking "Share on X". The follow-up
-        // tracking call is skipped because we have no signerId yet (it will
-        // resume after the user clicks the email magic link in /welcome).
-        if (intent !== 'wall') {
-          const shareText = getManualShareText()
-          const url = window.location.origin
-          switch (intent) {
-            case 'twitter':
-              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer')
-              break
-            case 'linkedin':
-              window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
-              navigator.clipboard.writeText(shareText).catch(() => {})
-              setError(t('signForm.storyCopiedLinkedIn'))
-              break
-            case 'facebook':
-              window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
-              navigator.clipboard.writeText(shareText).catch(() => {})
-              setError(t('signForm.storyCopiedFacebook'))
-              break
-            case 'instagram':
-              navigator.clipboard.writeText(shareText).catch(() => {})
-              setError(t('signForm.storyCopiedInstagram'))
-              break
-          }
+        const transitionToSuccess = () => {
+          setIsLeaving(true)
+          onSuccess('', formData.firstName)
+          setTimeout(() => setSubmitted(true), 350)
         }
 
-        setIsLeaving(true)
-        onSuccess('', formData.firstName)
-        setTimeout(() => setSubmitted(true), 350)
-      } catch (err: any) {
-        setError(err.message ?? t('signForm.genericError'))
+        // Show the share modal first. Tracking is skipped for first-time
+        // signers because we have no signerId yet — it resumes after the
+        // user clicks the email magic link in /welcome.
+        if (intent !== 'wall') {
+          requestShare(intent, getManualShareText(), {
+            trackingSource: 'manual_manifesto',
+            afterShare: transitionToSuccess,
+          })
+        } else {
+          transitionToSuccess()
+        }
+      } catch (err: unknown) {
+        const info = formatSubmitError(err, t, 'signForm.genericError')
+        setError(info.message)
+        setErrorKind(info.retryable ? 'network' : 'other')
+        setRetryableIntent(info.retryable ? intent : null)
       } finally {
         setLoading(false)
         setActiveIntent(null)
@@ -459,7 +517,46 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                     </div>
                   )}
 
-                  {error && <p className="text-[#dd3935] text-sm mt-2 text-center">{error}</p>}
+                  {error && errorKind === 'info' && (
+                    <p className="text-[#027A4F] text-sm font-mono mt-2 text-center">{error}</p>
+                  )}
+                  {error && errorKind !== 'info' && errorKind !== 'none' && (
+                    <div
+                      role="alert"
+                      aria-live="polite"
+                      className="mt-3 flex items-start gap-3 border-2 border-[#DD3935] bg-[#DD3935]/5 px-4 py-3"
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#DD3935"
+                        strokeWidth="2.25"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="flex-shrink-0 mt-0.5"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="13" />
+                        <line x1="12" y1="16.5" x2="12" y2="16.5" />
+                      </svg>
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-[#DD3935] text-sm font-mono font-bold">{error}</p>
+                        {errorKind === 'network' && retryableIntent && (
+                          <button
+                            type="button"
+                            onClick={() => void handleShare(retryableIntent)}
+                            disabled={loading}
+                            className="mt-2 px-3 py-1.5 border-2 border-[#DD3935] text-[#DD3935] font-mono text-xs font-bold uppercase tracking-wide hover:bg-[#DD3935] hover:text-white transition-colors disabled:opacity-50"
+                          >
+                            {loading ? t('inlineForm.signing') : t('common.tryAgain')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </form>
               </div>
             </div>
@@ -475,32 +572,35 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                 <Button onClick={() => navigate('/get-mark')} className="px-6 py-4 text-sm sm:text-base">
                   {t('signForm.getWaveMark')}
                 </Button>
-                <Button variant="secondary" onClick={async () => {
-                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getManualShareText())}`, '_blank', 'noopener,noreferrer')
-                  await trackSocial('twitter')
+                <Button variant="secondary" onClick={() => {
+                  requestShare('twitter', getManualShareText(), {
+                    trackingSource: 'success_screen',
+                    afterShare: () => { void trackSocial('twitter') },
+                  })
                 }} className="px-6 py-4 text-sm sm:text-base">
                   {t('signForm.shareOnX')}
                 </Button>
-                <Button variant="secondary" onClick={async () => {
-                  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`, '_blank', 'noopener,noreferrer')
-                  navigator.clipboard.writeText(getManualShareText()).catch(() => {})
-                  setError(t('signForm.storyCopiedLinkedIn'))
-                  await trackSocial('linkedin')
+                <Button variant="secondary" onClick={() => {
+                  requestShare('linkedin', getManualShareText(), {
+                    trackingSource: 'success_screen',
+                    afterShare: () => { void trackSocial('linkedin') },
+                  })
                 }} className="px-6 py-4 text-sm sm:text-base">
                   {t('signForm.shareOnLinkedIn')}
                 </Button>
-                <Button variant="secondary" onClick={async () => {
-                  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`, '_blank', 'noopener,noreferrer')
-                  navigator.clipboard.writeText(getManualShareText()).catch(() => {})
-                  setError(t('signForm.storyCopiedFacebook'))
-                  await trackSocial('facebook')
+                <Button variant="secondary" onClick={() => {
+                  requestShare('facebook', getManualShareText(), {
+                    trackingSource: 'success_screen',
+                    afterShare: () => { void trackSocial('facebook') },
+                  })
                 }} className="px-6 py-4 text-sm sm:text-base">
                   {t('signForm.shareOnFacebook')}
                 </Button>
-                <Button variant="secondary" onClick={async () => {
-                  navigator.clipboard.writeText(getManualShareText()).catch(() => {})
-                  setError(t('signForm.storyCopiedInstagram'))
-                  await trackSocial('instagram')
+                <Button variant="secondary" onClick={() => {
+                  requestShare('instagram', getManualShareText(), {
+                    trackingSource: 'success_screen',
+                    afterShare: () => { void trackSocial('instagram') },
+                  })
                 }} className="px-6 py-4 text-sm sm:text-base">
                   {t('signForm.copyForInstagram')}
                 </Button>
@@ -508,6 +608,17 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
             </div>
           )}
         </div>
+
+        <SocialShareModal
+          open={!!pendingShare}
+          platform={pendingShare?.platform ?? null}
+          onContinue={() => {
+            const continueCb = pendingShare?.onContinue
+            setPendingShare(null)
+            continueCb?.()
+          }}
+          onCancel={() => setPendingShare(null)}
+        />
       </section>
     )
   }

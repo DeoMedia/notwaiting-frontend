@@ -20,6 +20,7 @@ export const fr: Translations = {
     nextShort: 'Suiv. →',
     loadingDots: 'Chargement...',
     cancel: 'Annuler',
+    networkError: 'Problème de réseau — vérifiez votre connexion et réessayez.',
   },
   language: {
     label: 'Langue',
@@ -367,6 +368,7 @@ export const fr: Translations = {
     successTitle: 'Vous êtes maintenant sur la vague, {{name}}.',
     successBody: 'Bienvenue dans le mouvement. Vérifiez votre boîte de réception pour la confirmation, continuez à rejoindre le mouvement ou obtenez la marque de la vague.',
     genericError: "Une erreur s'est produite. Veuillez réessayer.",
+    captchaRequired: 'Veuillez compléter le défi captcha.',
   },
   signForm: {
     title: 'Ajoutez votre vague.',
@@ -411,10 +413,23 @@ export const fr: Translations = {
     copyForInstagram: 'Copier pour Instagram →',
     pleaseComplete: 'Veuillez compléter le formulaire.',
     genericError: "Une erreur s'est produite. Veuillez réessayer.",
+    captchaRequired: 'Veuillez compléter le défi captcha.',
     manualShareText: "Je viens de rejoindre #NotWaiting — le mouvement des bâtisseurs, créateurs et innovateurs africains. L'Afrique est en pleine vague.",
     storyCopiedLinkedIn: 'Histoire copiée. LinkedIn est ouvert — collez votre histoire dans la publication.',
     storyCopiedFacebook: 'Histoire copiée. Facebook est ouvert — collez votre histoire dans la publication.',
     storyCopiedInstagram: 'Histoire copiée. Vous pouvez maintenant la coller sur Instagram.',
+  },
+  share: {
+    modal: {
+      title: 'Presque prêt',
+      bodyCopied: 'Votre histoire a été copiée. Cliquez sur Continuer pour ouvrir {{platform}}, puis collez-la dans la fenêtre de publication.',
+      bodyPrefilled: 'Votre histoire est prête à être publiée sur {{platform}}. Cliquez sur Continuer pour ouvrir la fenêtre de publication — votre histoire sera pré-remplie.',
+      step1: '{{platform}} s’ouvre dans un nouvel onglet.',
+      step2: 'Commencez une nouvelle publication et collez votre histoire (Cmd / Ctrl + V, ou appui long → Coller).',
+      step3: 'Publiez — terminé.',
+      continue: 'Continuer vers {{platform}} →',
+      cancel: 'Annuler',
+    },
   },
   aiQuestionnaire: {
     q1: 'Que construisez-vous, créez-vous ou changez-vous ?',

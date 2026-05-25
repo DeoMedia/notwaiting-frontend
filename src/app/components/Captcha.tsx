@@ -13,7 +13,8 @@ import { useEffect, useRef } from 'react'
 //    connect-src / style-src.
 
 const SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY as string | undefined
-const SCRIPT_SRC = 'https://js.hcaptcha.com/1/api.js?render=explicit'
+const ONLOAD_CALLBACK = '__nwHcaptchaOnLoad'
+const SCRIPT_SRC = `https://js.hcaptcha.com/1/api.js?render=explicit&onload=${ONLOAD_CALLBACK}`
 
 type HCaptchaGlobal = {
   render: (
@@ -50,11 +51,15 @@ function loadScript(): Promise<void> {
       resolve()
       return
     }
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src^="${SCRIPT_SRC.split('?')[0]}"]`,
-    )
+    // Register the global onload callback BEFORE injecting the script.
+    // With render=explicit, script.onload can fire before window.hcaptcha is
+    // ready — only the onload query-param callback is guaranteed to run
+    // after the API is fully initialized.
+    ;(window as unknown as Record<string, () => void>)[ONLOAD_CALLBACK] = () => resolve()
+
+    const baseSrc = SCRIPT_SRC.split('?')[0]
+    const existing = document.querySelector<HTMLScriptElement>(`script[src^="${baseSrc}"]`)
     if (existing) {
-      existing.addEventListener('load', () => resolve(), { once: true })
       existing.addEventListener('error', () => reject(new Error('hcaptcha script load failed')), {
         once: true,
       })
@@ -64,7 +69,6 @@ function loadScript(): Promise<void> {
     s.src = SCRIPT_SRC
     s.async = true
     s.defer = true
-    s.onload = () => resolve()
     s.onerror = () => reject(new Error('hcaptcha script load failed'))
     document.head.appendChild(s)
   })
