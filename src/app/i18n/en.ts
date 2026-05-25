@@ -124,6 +124,8 @@ export const en = {
   },
   hero: {
     title: 'Africa is on a wave!',
+    titleLine1: 'Africa is',
+    titleLine2: 'on a wave!',
     in: 'In',
     andMore: 'and more.',
     join: 'Join the wave!',
