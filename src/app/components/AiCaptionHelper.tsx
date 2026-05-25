@@ -107,48 +107,29 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
       setTimeout(() => setCopied(false), 2000)
     }
 
-    const shareOnPlatform = async (platform: SharePlatform) => {
+    const shareOnPlatform = (platform: SharePlatform) => {
       const text = `${currentText}\n\n#NotWaiting`
-      const shareData: ShareData = {
-        title: '#NotWaiting',
-        text,
-        url: window.location.origin,
-      }
 
-      const trackShare = () => {
-        if (signerId) {
-          trackAction({ signerId, action: 'shared_social', metadata: { platform } })
-        }
-      }
-
-      // Web Share API (mobile-first): the receiving app reads text + URL
-      // from the OS share intent, so LinkedIn/Facebook/Instagram apps
-      // actually receive the caption — bypassing their web-URL text
-      // restrictions. No modal needed; the share sheet is the confirmation.
-      const canWebShare =
-        typeof navigator.share === 'function' &&
-        (typeof navigator.canShare !== 'function' || navigator.canShare(shareData))
-      if (canWebShare) {
-        try {
-          await navigator.share(shareData)
-          trackShare()
-          return
-        } catch (err) {
-          // User dismissed the share sheet — stop here (no fallback).
-          if ((err as DOMException)?.name === 'AbortError') return
-          // Other error → fall through to the legacy modal flow below.
-        }
-      }
-
-      // Desktop fallback: show the explanatory modal, then copy and open.
+      // Web Share API was tried but iOS LinkedIn/Facebook/Instagram apps
+      // strip the `text` field when a `url` is present in the share
+      // intent. We standardized on copy-clipboard + open-platform across
+      // mobile and desktop so the story always lands somewhere the user
+      // can paste into.
       const openUrl = (() => {
         switch (platform) {
           case 'twitter':
+            // X takes `text` only — no URL embedded in the post.
             return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`
           case 'linkedin':
-            return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`
+            // `?shareActive=true` opens LinkedIn's post-composer modal
+            // directly. Avoids share-offsite (which requires a URL param
+            // that would auto-embed the link in the post).
+            return 'https://www.linkedin.com/feed/?shareActive=true'
           case 'facebook':
-            return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`
+            // Facebook has no public composer-only URL — sharer.php
+            // requires `u=`. Land on the home feed; user taps
+            // "What's on your mind?" at the top.
+            return 'https://www.facebook.com/'
           case 'instagram':
             return 'https://www.instagram.com/'
         }
@@ -162,7 +143,9 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
             void copyToClipboard(text)
           }
           window.open(openUrl, '_blank', 'noopener,noreferrer')
-          trackShare()
+          if (signerId) {
+            trackAction({ signerId, action: 'shared_social', metadata: { platform } })
+          }
         },
       })
     }
