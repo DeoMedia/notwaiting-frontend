@@ -44,10 +44,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,woff2}'],
-        // We deliberately do NOT add a runtime cache for Supabase / the API.
-        // Auth tokens and per-user data must never be served to a different
-        // user from a stale ServiceWorker cache on shared devices, and
-        // NetworkFirst doesn't strip Authorization-bearing responses.
+        // Do not runtime-cache backend API responses. Auth cookies and
+        // per-user data must never be served stale on shared devices.
         runtimeCaching: [],
       },
     }),
