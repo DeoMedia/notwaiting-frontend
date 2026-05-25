@@ -269,27 +269,29 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
           return
         }
 
-        // First-time signer in this tab. The /api/manifesto endpoint:
-        //   1. Creates the signer (or finds the existing one — both paths
-        //      return identical 200, anti-enumeration is preserved).
-        //   2. Creates the story inline when caption + waveTag are present.
-        //   3. Emails a magic link the user clicks to unlock further actions
-        //      (the `nw_signer` cookie is set by /api/manifesto/claim).
-        // We don't get a signerId back, by design. The user still sees the
-        // "You're now on the wave" success screen immediately. Any further
-        // story posting / mark download requires them to click the email
-        // magic link in a new tab to claim a session.
+        // First-time signer in this tab. /api/manifesto now only signs —
+        // stories are exclusively created via cookie-gated /api/stories so
+        // an unverified email can never publish. We stash the typed story
+        // in sessionStorage and Welcome.tsx auto-posts it after the magic
+        // link is claimed.
+        const trimmedStory = formData.story.trim()
         await signManifesto({
           firstName: formData.firstName,
           country: formData.country,
           email: formData.email,
           wave: effectiveWave || undefined,
-          caption: formData.story.trim(),
-          waveTag: storyWaveTag,
           company: honeypot,
           captchaToken: captchaToken || undefined,
         })
-        try { sessionStorage.setItem('nw_first_name', formData.firstName) } catch {}
+        try {
+          sessionStorage.setItem('nw_first_name', formData.firstName)
+          if (trimmedStory) {
+            sessionStorage.setItem(
+              'nw_pending_story',
+              JSON.stringify({ caption: trimmedStory, waveTag: storyWaveTag }),
+            )
+          }
+        } catch { /* ignore quota / privacy-mode errors */ }
 
         const transitionToSuccess = () => {
           setIsLeaving(true)

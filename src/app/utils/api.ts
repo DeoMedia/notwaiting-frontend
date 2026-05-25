@@ -79,10 +79,6 @@ export async function signManifesto(payload: {
   country: string
   email: string
   wave?: string
-  /** Optional inline story posted atomically with the signup. */
-  caption?: string
-  /** Required when `caption` is set. Must be a known wave tag. */
-  waveTag?: string
   newsletterOptIn?: boolean
   /** Honeypot — must remain empty for real users. */
   company?: string
