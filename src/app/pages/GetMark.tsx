@@ -547,6 +547,9 @@ export default function GetMark() {
           link.download = `notwaiting-wave-mark-${format}.png`;
           link.href = url; link.click();
           URL.revokeObjectURL(url);
+          const w = window as Window & { dataLayer?: object[] };
+          w.dataLayer = w.dataLayer ?? [];
+          w.dataLayer.push({ event: 'wave_mark_download' });
         }
       }, 'image/png');
     } catch { flashBanner('error', t('getMark.alerts.downloadFailed')); }
