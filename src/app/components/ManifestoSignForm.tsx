@@ -10,7 +10,7 @@ import { Captcha, isCaptchaEnabled, type CaptchaHandle } from './Captcha';
 import { formatSubmitError } from '../utils/submitError';
 import { copyToClipboard } from '../utils/clipboard';
 import { SocialShareModal, type SharePlatform } from './SocialShareModal';
-import waveImage from '../../styles/waves.jpeg';
+import waveImage from '../../styles/waves.png';
 import { AiStoryQuestionnaire } from './AiStoryQuestionnaire';
 import { useLocalizedCountriesWithPlaceholder, useLocalizedSectors } from '../i18n/hooks';
 import {
