@@ -8,7 +8,7 @@ import { StatsSection } from '../components/StatsSection';
 import { HeroOverlay } from '../components/HeroOverlay';
 // import heroDesktop1 from '../../styles/Landing1.webp';
 // import heroDesktop2 from '../../styles/Landing2.webp';
-import heroDesktop3 from '../../styles/Landing3.jpeg';
+import heroDesktop3 from '../../styles/Landing3.png';
 // import heroDesktop4 from '../../styles/Landing4.webp';
 import heroMobile1 from '../../styles/PhoneLandingmobile-01.jpeg';
 // import heroMobile2 from '../../styles/PhoneLandingmobile-02.webp';
@@ -99,9 +99,9 @@ export default function Home() {
       desktop: heroDesktop3,
       mobile: heroMobile1,
       overlay: {
-        align: 'left',
+        align: 'center',
         className:
-          'top-[45%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:right-auto md:-translate-x-0 md:-translate-y-1/2 md:left-[2%] md:w-[48%]',
+          'top-[2%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:left-auto md:-translate-x-0 md:-translate-y-1/2 md:right-[18%] md:w-[48%]',
       },
     },
     // {

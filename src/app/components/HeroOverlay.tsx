@@ -29,8 +29,8 @@ export function HeroOverlay({ className = '', align = 'center', interval = 1200 
   }, [])
 
   const alignClass =
-    align === 'left' ? 'text-center items-center md:text-left md:items-start' :
-    align === 'right' ? 'text-center items-center md:text-right md:items-end' :
+    align === 'left' ? 'text-left items-start' :
+    align === 'right' ? 'text-right items-end' :
     'text-center items-center'
 
   const current = rotating[idx]
@@ -42,13 +42,12 @@ export function HeroOverlay({ className = '', align = 'center', interval = 1200 
 
   return (
     <div className={`absolute z-20 flex flex-col ${alignClass} ${className}`}>
-      <h1 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] leading-tight [-webkit-text-stroke:1px_#000]">
-        <span>{t('hero.titleLine1')}</span>{' '}
-        <span className="md:block">{t('hero.titleLine2')}</span>
+      <h1 className="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] leading-tight">
+        {t('hero.title')}
       </h1>
 
       <div className="mt-2 md:mt-3 flex flex-wrap gap-x-2 text-base md:text-xl font-bold text-white">
-        <span className="[-webkit-text-stroke:0.5px_#000]">{t('hero.in')}</span>
+        <span>{t('hero.in')}</span>
         <span
           key={current.value}
           className="inline-block animate-[fadeSlide_500ms_ease-out] px-2 rounded"
@@ -56,24 +55,24 @@ export function HeroOverlay({ className = '', align = 'center', interval = 1200 
         >
           {current.label}
         </span>
-        <span className="[-webkit-text-stroke:0.5px_#000]">{t('hero.andMore')}</span>
+        <span>{t('hero.andMore')}</span>
       </div>
 
-      <p className="mt-3 md:mt-6 text-2xl md:text-4xl font-black text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] [-webkit-text-stroke:1px_#000]">
+      <p className="mt-3 md:mt-6 text-2xl md:text-4xl font-black text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
         {t('hero.join')}
       </p>
-       <span className="text-3xl md:text-6xl font-custard normal-case text-white tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] [-webkit-text-stroke:1px_#000]">
+       <span className="text-3xl md:text-6xl font-custard normal-case text-white tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
               #NotWaiting
             </span>
 
-      <div className="hidden md:block mt-6 text-base md:text-lg italic font-medium leading-relaxed tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] [-webkit-text-stroke:0.5px_#000]">
+      <div className="hidden md:block mt-6 text-base md:text-lg italic font-medium leading-relaxed tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]">
         <p>{t('hero.line1')}</p>
         <p>{t('hero.line2')}</p>
         <p>{t('hero.line3')}</p>
-
+ 
       </div>
       <div className="md:block text-base md:text-lg italic font-medium leading-relaxed tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]">
-             <p className="mt-1 md:mt-2 not-italic text-sm md:text-base font-medium [-webkit-text-stroke:0.5px_#000]">
+             <p className="mt-1 md:mt-2 not-italic text-sm md:text-base font-medium">
           Powered by{' '}
           <a
             href="https://www.opportunityafrica.africa/"
