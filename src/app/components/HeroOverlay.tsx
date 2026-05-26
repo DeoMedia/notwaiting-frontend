@@ -61,7 +61,7 @@ export function HeroOverlay({ className = '', align = 'center', interval = 1200 
       <p className="mt-3 md:mt-6 text-2xl md:text-4xl font-black text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
         {t('hero.join')}
       </p>
-       <span className="text-3xl md:text-6xl font-custard normal-case text-white tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
+       <span className="text-3xl md:text-8xl font-custard normal-case text-white tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
               #NotWaiting
             </span>
 
