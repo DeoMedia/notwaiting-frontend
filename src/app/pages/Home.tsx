@@ -10,7 +10,7 @@ import { HeroOverlay } from '../components/HeroOverlay';
 // import heroDesktop2 from '../../styles/Landing2.webp';
 import heroDesktop3 from '../../styles/Landing3.png';
 // import heroDesktop4 from '../../styles/Landing4.webp';
-import heroMobile1 from '../../styles/PhoneLandingmobile-01.jpeg';
+import heroMobile1 from '../../styles/PhoneLandingmobile-01.png';
 // import heroMobile2 from '../../styles/PhoneLandingmobile-02.webp';
 // import heroMobile3 from '../../styles/PhoneLandingmobile-03.webp';
 // import heroMobile4 from '../../styles/PhoneLandingmobile-04.webp';

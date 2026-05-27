@@ -7,8 +7,8 @@ import patternBg2 from '../../imports/PATTERN2.png';
 // pillarbox inside the 16:9 embed frame, which is the standard look for
 // Shorts embeds on the web.
 const EXPLAINER_VIDEO_IDS: Record<string, string> = {
-  en: 'M1k-nKAonf4',
-  fr: 'nsfx-nXVh8w',
+  en: 'cO3GEGb4jbo',
+  fr: 'K0XiCaXDmFE',
 };
 
 export default function About() {
