@@ -198,10 +198,14 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
 
     const handleResendVerification = async () => {
       const signerIdForResend = getStoredSignerId()
-      if (!signerIdForResend || resendState === 'sending') return
+      const emailForResend = (verifyState?.email || formData.email).trim()
+      if ((!signerIdForResend && !emailForResend) || resendState === 'sending') return
       setResendState('sending')
       try {
-        await resendVerificationEmail(signerIdForResend)
+        await resendVerificationEmail({
+          signerId: signerIdForResend || undefined,
+          email: emailForResend || undefined,
+        })
         setResendState('sent')
       } catch {
         // Server-side rate limit (3/hour) is the realistic failure mode.
