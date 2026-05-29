@@ -5,6 +5,7 @@ import {
   generateCaption,
   fetchStories,
   publishStory,
+  resendVerificationEmail,
   trackAction,
   fetchDashboard,
   createAdminSession,
@@ -214,6 +215,24 @@ describe('publishStory', () => {
 
     await expect(publishStory({ signerId: 's1', caption: 'x'.repeat(601), waveTag: 'tech' }))
       .rejects.toThrow(/too long/i)
+  })
+})
+
+describe('resendVerificationEmail', () => {
+  beforeEach(() => mockFetch.mockClear())
+
+  it('POSTs signerId and email to /api/manifesto/resend-verification', async () => {
+    mockFetch.mockReturnValue(mockOk({ success: true }))
+
+    await resendVerificationEmail({ signerId: 'signer-1', email: 'test@example.com' })
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/manifesto/resend-verification'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ signerId: 'signer-1', email: 'test@example.com' }),
+      })
+    )
   })
 })
 

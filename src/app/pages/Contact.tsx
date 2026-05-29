@@ -207,7 +207,7 @@ export default function Contact() {
                     )}
 
                     <Button type="submit" disabled={submitting} className="w-full py-4">
-                      {submitting ? (t('contact.submitting') ?? 'Sending…') : t('contact.submit')}
+                      {submitting ? (t('submitting') ?? 'Sending…') : t('contact.submit')}
                     </Button>
                   </form>
                 </>
