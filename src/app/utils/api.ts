@@ -11,10 +11,8 @@ function getApiBaseUrl() {
   return API_BASE
 }
 
-// The signer session cookie (`nw_signer`) is HttpOnly and minted only after
-// the user clicks the email magic link. Frontend code never stores signer ids
-// or story drafts; cookie-backed endpoints decide whether the current device
-// is verified for the submitted email.
+// Email verification is stored server-side. The frontend submits the email with
+// story requests; the API decides whether that address has already been verified.
 
 // Error thrown when a request fails. Carries the HTTP status so callers can
 // branch on it (e.g. 401 → sign out) without brittle string-matching on the
