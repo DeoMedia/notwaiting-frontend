@@ -35,7 +35,7 @@ describe('signManifesto', () => {
   beforeEach(() => mockFetch.mockClear())
 
   it('POSTs to /api/manifesto with correct payload', async () => {
-    mockFetch.mockReturnValue(mockOk({ success: true, signerId: 'uuid-1' }))
+    mockFetch.mockReturnValue(mockOk({ success: true }))
 
     const result = await signManifesto({ firstName: 'Amara', country: 'ghana', wave: 'fintech' })
 
@@ -46,7 +46,7 @@ describe('signManifesto', () => {
         body: JSON.stringify({ firstName: 'Amara', country: 'ghana', wave: 'fintech' }),
       })
     )
-    expect(result.signerId).toBe('uuid-1')
+    expect(result.success).toBe(true)
   })
 
   it('throws with server error message on failure', async () => {
@@ -64,7 +64,7 @@ describe('signManifesto', () => {
   })
 
   it('sends Content-Type: application/json header', async () => {
-    mockFetch.mockReturnValue(mockOk({ success: true, signerId: 'x' }))
+    mockFetch.mockReturnValue(mockOk({ success: true }))
 
     await signManifesto({ firstName: 'A', country: 'B' })
 
@@ -201,10 +201,18 @@ describe('publishStory', () => {
   it('POSTs to /api/stories with correct payload', async () => {
     mockFetch.mockReturnValue(mockOk({ success: true, storyId: 'story-1' }))
 
-    const result = await publishStory({ signerId: 'signer-1', caption: 'My story', waveTag: 'tech' })
+    const result = await publishStory({
+      firstName: 'Amara',
+      country: 'ghana',
+      email: 'amara@example.com',
+      wave: 'tech',
+      caption: 'My story',
+      waveTag: 'tech',
+    })
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(body.signerId).toBe('signer-1')
+    expect(body.email).toBe('amara@example.com')
+    expect(body.firstName).toBe('Amara')
     expect(body.caption).toBe('My story')
     expect(body.waveTag).toBe('tech')
     expect(result.storyId).toBe('story-1')
@@ -213,24 +221,42 @@ describe('publishStory', () => {
   it('throws when server rejects with 422', async () => {
     mockFetch.mockReturnValue(mockError(422, { error: 'Caption too long (max 600 characters)' }))
 
-    await expect(publishStory({ signerId: 's1', caption: 'x'.repeat(601), waveTag: 'tech' }))
+    await expect(publishStory({
+      firstName: 'A',
+      country: 'nigeria',
+      email: 'a@example.com',
+      caption: 'x'.repeat(601),
+      waveTag: 'tech',
+    }))
       .rejects.toThrow(/too long/i)
+  })
+
+  it('preserves backend verification error code', async () => {
+    mockFetch.mockReturnValue(mockError(403, { error: 'Email is not verified', code: 'email_not_verified' }))
+
+    await expect(publishStory({
+      firstName: 'A',
+      country: 'nigeria',
+      email: 'a@example.com',
+      caption: 'My story',
+      waveTag: 'tech',
+    })).rejects.toMatchObject({ status: 403, code: 'email_not_verified' })
   })
 })
 
 describe('resendVerificationEmail', () => {
   beforeEach(() => mockFetch.mockClear())
 
-  it('POSTs signerId and email to /api/manifesto/resend-verification', async () => {
+  it('POSTs email to /api/manifesto/resend-verification', async () => {
     mockFetch.mockReturnValue(mockOk({ success: true }))
 
-    await resendVerificationEmail({ signerId: 'signer-1', email: 'test@example.com' })
+    await resendVerificationEmail({ email: 'test@example.com' })
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/manifesto/resend-verification'),
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ signerId: 'signer-1', email: 'test@example.com' }),
+        body: JSON.stringify({ email: 'test@example.com' }),
       })
     )
   })
@@ -242,7 +268,7 @@ describe('trackAction', () => {
   it('POSTs to /api/actions', async () => {
     mockFetch.mockReturnValue(mockOk({ success: true }))
 
-    await trackAction({ signerId: 'uuid-1', action: 'got_mark' })
+    await trackAction({ action: 'got_mark' })
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/actions'),
@@ -255,7 +281,7 @@ describe('trackAction', () => {
 
     // Should resolve without throwing
     await expect(
-      trackAction({ signerId: 'uuid-1', action: 'got_mark' })
+      trackAction({ action: 'got_mark' })
     ).resolves.toBeUndefined()
   })
 
@@ -263,7 +289,6 @@ describe('trackAction', () => {
     mockFetch.mockReturnValue(mockOk({ success: true }))
 
     await trackAction({
-      signerId: 'uuid-1',
       action: 'shared_social',
       metadata: { platform: 'twitter' },
     })

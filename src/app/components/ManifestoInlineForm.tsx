@@ -67,11 +67,8 @@ export function ManifestoInlineForm() {
         company: honeypot,
         captchaToken: captchaToken || undefined,
       })
-      // Server response is deliberately bare `{success:true}` — no signerId,
-      // no token, no Set-Cookie — regardless of whether the email was new or
-      // already in the database. The credential ships out-of-band via the
-      // confirmation email so /api/manifesto can't be used to enumerate.
-      try { sessionStorage.setItem('nw_first_name', form.firstName.trim()) } catch {}
+      // Server response is deliberately bare `{success:true}` regardless of
+      // whether the email was new or already in the database.
       setSigned(true)
     } catch (err: unknown) {
       const info = formatSubmitError(err, t, 'inlineForm.genericError')

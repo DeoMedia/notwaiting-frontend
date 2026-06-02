@@ -5,52 +5,22 @@
 
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
-// ── Signer ownership ──────────────────────────────────────────
-// The signer session cookie (`nw_signer`) is HttpOnly and is now only
-// minted by POST /api/manifesto/claim — after the user clicks the magic
-// link in the confirmation email. This gates cookie issuance on email
-// control and lets POST /api/manifesto return an identical 200 success
-// response on both fresh and duplicate-email paths (anti-enumeration).
-//
-// signerId is remembered in sessionStorage because /api/stories and
-// /api/actions require it in the body to bind the cookie to a specific
-// signer. The id is only persisted *after* a successful /claim — the
-// initial POST /api/manifesto response carries nothing.
-const SIGNER_ID_KEY = 'nw_signer_id'
-
-function safeSession() {
-  try {
-    return typeof window !== 'undefined' ? window.sessionStorage : null
-  } catch {
-    return null
-  }
-}
-
-export function storeSignerCredentials(signerId: string) {
-  const s = safeSession()
-  if (!s) return
-  s.setItem(SIGNER_ID_KEY, signerId)
-}
-
-export function clearSignerCredentials() {
-  const s = safeSession()
-  if (!s) return
-  s.removeItem(SIGNER_ID_KEY)
-}
-
-export function getStoredSignerId(): string | null {
-  return safeSession()?.getItem(SIGNER_ID_KEY) ?? null
-}
+// The signer session cookie (`nw_signer`) is HttpOnly and minted only after
+// the user clicks the email magic link. Frontend code never stores signer ids
+// or story drafts; cookie-backed endpoints decide whether the current device
+// is verified for the submitted email.
 
 // Error thrown when a request fails. Carries the HTTP status so callers can
 // branch on it (e.g. 401 → sign out) without brittle string-matching on the
 // message body.
 export class ApiError extends Error {
   status: number
-  constructor(message: string, status: number) {
+  code?: string
+  constructor(message: string, status: number, code?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -63,17 +33,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     const message = (data as { error?: string }).error ?? `Request failed: ${res.status}`
-    throw new ApiError(message, res.status)
+    const code = (data as { code?: string }).code
+    throw new ApiError(message, res.status, code)
   }
   return data as T
 }
 
 // ── Manifesto ─────────────────────────────────────────────────
 // The response is intentionally bare `{ success: true }` regardless of
-// whether this email was a fresh signup or already existed. Anything that
-// depends on signerId/signerToken (story posting, action tracking, the
-// session cookie) happens after the user clicks the magic link in the
-// confirmation email — see claimSignerSession() below.
+// whether this email was a fresh signup or already existed.
 export async function signManifesto(payload: {
   firstName: string
   country: string
@@ -92,23 +60,19 @@ export async function signManifesto(payload: {
 }
 
 // Redeem the magic-link token from the confirmation email. On success the
-// server sets the HttpOnly `nw_signer` cookie and returns the signerId so
-// the SPA can remember it locally for subsequent /api/stories writes.
+// server sets the HttpOnly `nw_signer` cookie.
 export async function claimSignerSession(payload: { signerId: string; token: string }) {
-  const res = await request<{ success: true; signerId: string; firstName: string }>(
+  return request<{ success: true; signerId: string; firstName: string }>(
     '/api/manifesto/claim',
     {
       method: 'POST',
       body: JSON.stringify(payload),
     },
   )
-  storeSignerCredentials(res.signerId)
-  return res
 }
 
-// Trigger a fresh verification email. Claimed signers can use signerId after
-// a cookie loss; pre-claim signers use email from the check-inbox screen. The
-// server always responds 200 — we can't distinguish "sent" from "no such signer".
+// Trigger a fresh verification email. The server always responds 200 — we
+// can't distinguish "sent" from "no such signer".
 export async function resendVerificationEmail(payload: { signerId?: string | null; email?: string | null }) {
   return request<{ success: true }>('/api/manifesto/resend-verification', {
     method: 'POST',
@@ -149,13 +113,17 @@ export async function fetchStories(params?: {
 }
 
 export async function publishStory(payload: {
-  signerId: string
+  firstName: string
+  country: string
+  email: string
+  wave?: string
   caption: string
   waveTag: string
+  /** Honeypot — must remain empty for real users. */
+  company?: string
+  /** Optional hCaptcha token if the site has it enabled. */
+  captchaToken?: string
 }) {
-  // Signer token now rides as the HttpOnly `nw_signer` cookie set by
-  // POST /api/manifesto. The `credentials: 'include'` in `request<T>`
-  // makes the browser auto-attach it; no header to manage.
   return request<{ success: boolean; storyId: string }>('/api/stories', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -164,7 +132,6 @@ export async function publishStory(payload: {
 
 // ── Actions ───────────────────────────────────────────────────
 export async function trackAction(payload: {
-  signerId: string
   action: 'got_mark' | 'shared_social' | 'shared_story'
   metadata?: Record<string, unknown>
 }) {

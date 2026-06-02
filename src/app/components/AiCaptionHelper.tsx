@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Textarea } from './Textarea';
-import { generateCaption, publishStory, trackAction } from '../utils/api';
+import { generateCaption, trackAction } from '../utils/api';
 import { copyToClipboard } from '../utils/clipboard';
 import { SocialShareModal, type SharePlatform } from './SocialShareModal';
 import { useLocalizedSectors } from '../i18n/hooks';
@@ -144,24 +144,14 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
           }
           window.open(openUrl, '_blank', 'noopener,noreferrer')
           if (signerId) {
-            trackAction({ signerId, action: 'shared_social', metadata: { platform } })
+            trackAction({ action: 'shared_social', metadata: { platform } })
           }
         },
       })
     }
 
     const postToWall = async () => {
-      if (!signerId) {
-        flashStatus('error', t('aiCaption.signFirst'))
-        return
-      }
-      try {
-        await publishStory({ signerId, caption: currentText, waveTag: effectiveCategory() })
-        trackAction({ signerId, action: 'shared_story', metadata: { source: 'ai_helper' } })
-        flashStatus('info', t('aiCaption.storyLive'))
-      } catch (err: any) {
-        flashStatus('error', err.message ?? t('aiCaption.couldNotPublish'))
-      }
+      flashStatus('error', t('aiCaption.signFirst'))
     }
 
     return (

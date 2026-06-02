@@ -565,9 +565,7 @@ export default function GetMark() {
   };
 
   const trackShare = (platform: string) => {
-    const signerId = sessionStorage.getItem('nw_signer_id');
-    if (!signerId) return;
-    trackAction({ signerId, action: 'shared_social', metadata: { platform, source: 'get_mark' } });
+    trackAction({ action: 'shared_social', metadata: { platform, source: 'get_mark' } });
   };
 
   const handleShare = async () => {
