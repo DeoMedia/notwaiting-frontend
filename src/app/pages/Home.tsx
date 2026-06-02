@@ -16,7 +16,7 @@ import heroMobile1 from '../../styles/PhoneLandingmobile-01.png';
 // import heroMobile4 from '../../styles/PhoneLandingmobile-04.webp';
 // import patternBg2 from '../../imports/PATTERN_1-1.png';
 import waveMarkExample from '../../styles/wave_mark_sample.jpeg';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { getSignerCount } from '../utils/api';
 
 let manifestoAutoScrolled = false;
@@ -69,6 +69,7 @@ function AnimatedManifestoNumber({ value, active }: { value: number; active: boo
 
 export default function Home() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useTranslation()
 
 
@@ -175,6 +176,22 @@ export default function Home() {
   }, [])
 
   const scrollToSignOn = () => signOnRef.current?.scrollIntoView({ behavior: 'smooth' })
+
+  // Routed here with intent to write a story (the "Write your story" CTA on
+  // /welcome)? Suppress the manifesto auto-scroll so it doesn't fight us for
+  // the viewport. Set during render — before the auto-scroll effect runs and
+  // schedules its competing scroll.
+  const wantsSignOn = (location.state as { scrollTo?: string } | null)?.scrollTo === 'signOn'
+  if (wantsSignOn) manifestoAutoScrolled = true
+
+  // Scroll straight to the "Add your wave" form on arrival.
+  useEffect(() => {
+    if (!wantsSignOn) return
+    const timer = setTimeout(() => {
+      signOnRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [wantsSignOn])
 
   const handleSignSuccess = (_id: string, _name: string) => {
     loadManifestoStats()

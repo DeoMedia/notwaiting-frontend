@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Textarea } from './Textarea';
-import { signManifesto, publishStory, trackAction, getStoredSignerId, resendVerificationEmail } from '../utils/api';
+import { signManifesto, publishStory, trackAction, resendVerificationEmail, ApiError } from '../utils/api';
 import { Honeypot } from './Honeypot';
 import { Captcha, isCaptchaEnabled, type CaptchaHandle } from './Captcha';
 import { formatSubmitError } from '../utils/submitError';
@@ -27,6 +27,12 @@ interface Props {
 
 type ShareIntent = 'wall' | 'twitter' | 'linkedin' | 'facebook' | 'instagram'
 
+// Publishing a story / signing while unverified makes the backend send a
+// verification email automatically. After that we disable "resend" for this
+// many seconds so the user can't immediately fire a duplicate; it re-enables
+// afterwards for a genuine "I didn't get it" retry.
+const RESEND_COOLDOWN_SECONDS = 30
+
 export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
   ({ onSuccess }, ref) => {
     const navigate = useNavigate()
@@ -47,6 +53,10 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const [retryableIntent, setRetryableIntent] = useState<ShareIntent | null>(null)
     const [errorKind, setErrorKind]     = useState<'none' | 'info' | 'captcha' | 'network' | 'verification' | 'other'>('none')
     const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
+    // Seconds until "resend" is allowed again. Set when a verification email was
+    // just sent (auto-send on publish/sign, or a manual resend) to block an
+    // immediate duplicate; ticked down to 0 by the effect below.
+    const [resendCooldown, setResendCooldown] = useState(0)
     // Pending share — we show the modal first and only open the platform when
     // the user clicks Continue. The callback captures everything that should
     // happen on confirmation (window.open, clipboard, tracking, post-share
@@ -59,10 +69,8 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const [submitted, setSubmitted]     = useState(false)
     const [isLeaving, setIsLeaving]     = useState(false)
     const [successVisible, setSuccessVisible] = useState(false)
-    const [signerId, setSignerId]       = useState<string | null>(null)
-    // First-time signer who must still click the magic link in their email
-    // before the story we just stashed gets published. Drives the verify-copy
-    // success screen (vs. the "story is live" screen used for returning signers).
+    // First-time signer who must still click the magic link in their email.
+    // Story publishing is no longer stashed or auto-posted after verification.
     const [verifyState, setVerifyState] = useState<{ email: string; hadStory: boolean } | null>(null)
     const [showAiHelper, setShowAiHelper] = useState(false)
     const [honeypot, setHoneypot]       = useState('')
@@ -95,14 +103,20 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       }
     }, [submitted])
 
+    // Tick the resend cooldown down to zero, one second at a time.
+    useEffect(() => {
+      if (resendCooldown <= 0) return
+      const id = setTimeout(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000)
+      return () => clearTimeout(id)
+    }, [resendCooldown])
+
     const getManualShareText = () => {
       const story = formData.story.trim() || t('signForm.manualShareText')
       return `${story}\n\n#NotWaiting`
     }
 
     const trackSocial = async (platform: string) => {
-      if (!signerId) return
-      await trackAction({ signerId, action: 'shared_social', metadata: { platform, source: 'manual_manifesto' } })
+      await trackAction({ action: 'shared_social', metadata: { platform, source: 'manual_manifesto' } })
     }
 
     const runValidation = () => {
@@ -178,15 +192,14 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const requestShare = (
       platform: SharePlatform,
       shareText: string,
-      options: { signerIdForTracking?: string; trackingSource: string; afterShare?: () => void } = { trackingSource: 'manual_manifesto' },
+      options: { track?: boolean; trackingSource: string; afterShare?: () => void } = { trackingSource: 'manual_manifesto' },
     ) => {
       setPendingShare({
         platform,
         onContinue: () => {
           executeShare(platform, shareText)
-          if (options.signerIdForTracking) {
+          if (options.track) {
             void trackAction({
-              signerId: options.signerIdForTracking,
               action: 'shared_social',
               metadata: { platform, source: options.trackingSource },
             })
@@ -197,16 +210,15 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     }
 
     const handleResendVerification = async () => {
-      const signerIdForResend = getStoredSignerId()
       const emailForResend = (verifyState?.email || formData.email).trim()
-      if ((!signerIdForResend && !emailForResend) || resendState === 'sending') return
+      if (!emailForResend || resendState === 'sending' || resendCooldown > 0) return
       setResendState('sending')
       try {
         await resendVerificationEmail({
-          signerId: signerIdForResend || undefined,
-          email: emailForResend || undefined,
+          email: emailForResend,
         })
         setResendState('sent')
+        setResendCooldown(RESEND_COOLDOWN_SECONDS)
       } catch {
         // Server-side rate limit (3/hour) is the realistic failure mode.
         // Reuse the existing 'failed' state — the button copy reflects it.
@@ -222,11 +234,7 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
 
       if (!runValidation()) return
 
-      const existingSignerId = getStoredSignerId()
-      // Captcha required only when we'll hit /api/manifesto. A returning
-      // signer (already-claimed session in this tab) skips the captcha
-      // because we go straight to publishStory under their cookie.
-      if (isCaptchaEnabled() && !existingSignerId && !captchaToken) {
+      if (isCaptchaEnabled() && !captchaToken) {
         setError(t('signForm.captchaRequired'))
         setErrorKind('captcha')
         return
@@ -242,47 +250,26 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       setLoading(true)
       setActiveIntent(intent)
       try {
-        if (existingSignerId) {
-          // The user has an active claimed session — post the story directly.
-          // No new signup, no email round-trip required.
+        if (intent === 'wall') {
           await publishStory({
-            signerId: existingSignerId,
+            firstName: formData.firstName,
+            country: formData.country,
+            email: formData.email,
+            wave: effectiveWave || undefined,
             caption: formData.story.trim(),
             waveTag: storyWaveTag,
-          })
-          await trackAction({
-            signerId: existingSignerId,
-            action: 'shared_story',
-            metadata: { source: 'manual_manifesto', subject: formData.subject },
+            company: honeypot,
+            captchaToken: captchaToken || undefined,
           })
 
-          setSignerId(existingSignerId)
-          const transitionToSuccess = () => {
-            setIsLeaving(true)
-            onSuccess(existingSignerId, formData.firstName)
-            setTimeout(() => setSubmitted(true), 350)
-          }
-
-          if (intent !== 'wall') {
-            // Show the share modal first; success transition fires after
-            // the user confirms and the platform window has been opened.
-            requestShare(intent, getManualShareText(), {
-              signerIdForTracking: existingSignerId,
-              trackingSource: 'manual_manifesto',
-              afterShare: transitionToSuccess,
-            })
-          } else {
-            transitionToSuccess()
-          }
+          setIsLeaving(true)
+          onSuccess('', formData.firstName)
+          setTimeout(() => setSubmitted(true), 350)
           return
         }
 
-        // First-time signer in this tab. /api/manifesto now only signs —
-        // stories are exclusively created via cookie-gated /api/stories so
-        // an unverified email can never publish. We stash the typed story
-        // in sessionStorage and Welcome.tsx auto-posts it after the magic
-        // link is claimed.
-        const trimmedStory = formData.story.trim()
+        // Social sharing can still sign the manifesto and send the verification
+        // email, but it no longer stores or auto-publishes the story draft.
         await signManifesto({
           firstName: formData.firstName,
           country: formData.country,
@@ -291,17 +278,12 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
           company: honeypot,
           captchaToken: captchaToken || undefined,
         })
-        try {
-          sessionStorage.setItem('nw_first_name', formData.firstName)
-          if (trimmedStory) {
-            sessionStorage.setItem(
-              'nw_pending_story',
-              JSON.stringify({ caption: trimmedStory, waveTag: storyWaveTag }),
-            )
-          }
-        } catch { /* ignore quota / privacy-mode errors */ }
 
-        setVerifyState({ email: formData.email, hadStory: Boolean(trimmedStory) })
+        setVerifyState({ email: formData.email, hadStory: true })
+        // signManifesto just triggered a verification email — gate resend so the
+        // verify screen can't immediately send a second one.
+        setResendState('sent')
+        setResendCooldown(RESEND_COOLDOWN_SECONDS)
 
         const transitionToSuccess = () => {
           setIsLeaving(true)
@@ -309,28 +291,24 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
           setTimeout(() => setSubmitted(true), 350)
         }
 
-        // Show the share modal first. Tracking is skipped for first-time
-        // signers because we have no signerId yet — it resumes after the
-        // user clicks the email magic link in /welcome.
-        if (intent !== 'wall') {
-          requestShare(intent, getManualShareText(), {
-            trackingSource: 'manual_manifesto',
-            afterShare: transitionToSuccess,
-          })
-        } else {
-          transitionToSuccess()
-        }
+        requestShare(intent, getManualShareText(), {
+          track: true,
+          trackingSource: 'manual_manifesto',
+          afterShare: transitionToSuccess,
+        })
       } catch (err: unknown) {
         const info = formatSubmitError(err, t, 'signForm.genericError')
-        setError(info.message)
-        if (info.status === 401 && getStoredSignerId()) {
-          // Unverified-email branch: the cookie is missing/expired, so the
-          // server rejected the story write. Offer to resend the magic-link
-          // email instead of asking the user to fill the form again.
+        if (err instanceof ApiError && err.code === 'email_not_verified') {
+          setError(t('signForm.emailNotVerified', { defaultValue: info.message || 'Email is not verified' }))
           setErrorKind('verification')
-          setResendState('idle')
+          // The publish endpoint already sent a verification email as part of
+          // this attempt — reflect that and gate resend so the user can't fire a
+          // duplicate the moment the error appears.
+          setResendState('sent')
+          setResendCooldown(RESEND_COOLDOWN_SECONDS)
           setRetryableIntent(null)
         } else {
+          setError(info.message)
           setErrorKind(info.retryable ? 'network' : 'other')
           setRetryableIntent(info.retryable ? intent : null)
         }
@@ -614,13 +592,16 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                           <button
                             type="button"
                             onClick={() => void handleResendVerification()}
-                            disabled={resendState === 'sending' || resendState === 'sent'}
+                            disabled={resendState === 'sending' || resendCooldown > 0}
                             className="mt-2 px-3 py-1.5 border-2 border-[#027A4F] text-[#027A4F] font-mono text-xs font-bold uppercase tracking-wide hover:bg-[#027A4F] hover:text-white transition-colors disabled:opacity-60"
                           >
-                            {resendState === 'sending' && t('signForm.resendSending')}
-                            {resendState === 'sent' && t('signForm.resendSent')}
-                            {resendState === 'failed' && t('signForm.resendFailed')}
-                            {resendState === 'idle' && t('signForm.resendVerification')}
+                            {resendState === 'sending'
+                              ? t('signForm.resendSending')
+                              : resendCooldown > 0
+                                ? t('signForm.resendCooldown', { seconds: resendCooldown })
+                                : resendState === 'failed'
+                                  ? t('signForm.resendFailed')
+                                  : t('signForm.resendVerification')}
                           </button>
                         )}
                       </div>
@@ -647,13 +628,16 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                 <button
                   type="button"
                   onClick={() => void handleResendVerification()}
-                  disabled={resendState === 'sending' || resendState === 'sent'}
+                  disabled={resendState === 'sending' || resendCooldown > 0}
                   className="px-5 py-2.5 border-2 border-[#027A4F] text-[#027A4F] font-mono text-xs font-bold uppercase tracking-wide hover:bg-[#027A4F] hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {resendState === 'sending' && t('signForm.resendSending')}
-                  {resendState === 'sent' && t('signForm.resendSent')}
-                  {resendState === 'failed' && t('signForm.resendFailed')}
-                  {resendState === 'idle' && t('signForm.resendVerification')}
+                  {resendState === 'sending'
+                    ? t('signForm.resendSending')
+                    : resendCooldown > 0
+                      ? t('signForm.resendCooldown', { seconds: resendCooldown })
+                      : resendState === 'failed'
+                        ? t('signForm.resendFailed')
+                        : t('signForm.resendVerification')}
                 </button>
               </div>
             </div>
