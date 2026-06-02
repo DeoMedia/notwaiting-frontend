@@ -7,9 +7,8 @@ type ClaimStatus = 'pending' | 'success' | 'invalid' | 'error'
 
 // /welcome — the landing page reached by clicking the magic link in the
 // confirmation email. Reads ?t=<token>&id=<signerId>, posts them to the
-// /api/manifesto/claim endpoint, and on success the backend sets the
-// HttpOnly nw_signer cookie. Publishing still happens from the story form;
-// this page only verifies the email/device.
+// /api/manifesto/claim endpoint, and on success the backend marks the email
+// as verified. Publishing still happens from the story form.
 export default function Welcome() {
   const { t } = useTranslation()
   const navigate = useNavigate()

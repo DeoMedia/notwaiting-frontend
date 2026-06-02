@@ -53,7 +53,6 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const [retryableIntent, setRetryableIntent] = useState<ShareIntent | null>(null)
     const [errorKind, setErrorKind]     = useState<'none' | 'info' | 'captcha' | 'network' | 'verification' | 'other'>('none')
     const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
-    const [verificationAction, setVerificationAction] = useState<'verification' | 'session'>('verification')
     // Seconds until "resend" is allowed again. Set when a verification email was
     // just sent (auto-send on publish/sign, or a manual resend) to block an
     // immediate duplicate; ticked down to 0 by the effect below.
@@ -232,7 +231,6 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       setErrorKind('none')
       setRetryableIntent(null)
       setResendState('idle')
-      setVerificationAction('verification')
 
       if (!runValidation()) return
 
@@ -300,29 +298,14 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
         })
       } catch (err: unknown) {
         const info = formatSubmitError(err, t, 'signForm.genericError')
-        if (err instanceof ApiError && (err.code === 'email_not_verified' || err.code === 'verified_session_required')) {
-          const sessionRequired = err.code === 'verified_session_required'
-          setError(sessionRequired
-            ? t('signForm.verifiedSessionRequired', {
-                defaultValue: info.message || 'This email is verified, but this browser needs to be re-confirmed. Send yourself a fresh link below.',
-              })
-            : t('signForm.emailNotVerified', { defaultValue: info.message || 'Email is not verified' }))
+        if (err instanceof ApiError && err.code === 'email_not_verified') {
+          setError(t('signForm.emailNotVerified', { defaultValue: info.message || 'Email is not verified' }))
           setErrorKind('verification')
-          if (sessionRequired) {
-            // The API did not send another email automatically because this
-            // address is already verified; let the user request a fresh
-            // session-link email explicitly.
-            setVerificationAction('session')
-            setResendState('idle')
-            setResendCooldown(0)
-          } else {
-            // The publish endpoint already sent a verification email as part of
-            // this attempt — reflect that and gate resend so the user can't fire
-            // a duplicate the moment the error appears.
-            setVerificationAction('verification')
-            setResendState('sent')
-            setResendCooldown(RESEND_COOLDOWN_SECONDS)
-          }
+          // The publish endpoint already sent a verification email as part of
+          // this attempt — reflect that and gate resend so the user can't fire a
+          // duplicate the moment the error appears.
+          setResendState('sent')
+          setResendCooldown(RESEND_COOLDOWN_SECONDS)
           setRetryableIntent(null)
         } else {
           setError(info.message)
@@ -618,9 +601,7 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                                 ? t('signForm.resendCooldown', { seconds: resendCooldown })
                                 : resendState === 'failed'
                                   ? t('signForm.resendFailed')
-                                  : verificationAction === 'session'
-                                    ? t('signForm.sendSessionLink')
-                                    : t('signForm.resendVerification')}
+                                  : t('signForm.resendVerification')}
                           </button>
                         )}
                       </div>
