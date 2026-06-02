@@ -1,9 +1,15 @@
 // src/app/utils/api.ts
 // All calls to the backend API go through this file.
-// The base URL reads from the Vite env variable so it works
-// in dev (localhost:3001) and production (your deployed server URL).
+// The base URL is supplied by the environment for each deployment.
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+const API_BASE = String(import.meta.env.VITE_API_URL ?? '').trim().replace(/\/$/, '')
+
+function getApiBaseUrl() {
+  if (!API_BASE) {
+    throw new Error('VITE_API_URL is not configured')
+  }
+  return API_BASE
+}
 
 // The signer session cookie (`nw_signer`) is HttpOnly and minted only after
 // the user clicks the email magic link. Frontend code never stores signer ids
@@ -25,7 +31,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     ...options,
@@ -173,7 +179,7 @@ export async function createAdminSession(payload: { email: string; password: str
 // Clear the admin session cookie. Idempotent — 204 on success even if no
 // cookie was set.
 export async function destroyAdminSession() {
-  await fetch(`${BASE}/api/admin/session`, {
+  await fetch(`${getApiBaseUrl()}/api/admin/session`, {
     method: 'DELETE',
     credentials: 'include',
   }).catch(() => { /* best-effort */ })

@@ -109,4 +109,25 @@ describe('ManifestoSignForm — resend verification is gated after an auto-send'
     // publish-time send produces the (single) email.
     expect(api.resendVerificationEmail).not.toHaveBeenCalled()
   })
+
+  it('keeps the email-link action enabled when a verified email needs a fresh browser session', async () => {
+    api.publishStory.mockRejectedValue(new ApiError(
+      'This email is verified, but this browser needs to be re-confirmed.',
+      403,
+      'verified_session_required',
+    ))
+
+    const { container } = renderForm()
+    fillAndReveal(container)
+    fireEvent.click(await screen.findByRole('button', { name: i18n.t('signForm.shareToWall') }))
+
+    await screen.findByText(i18n.t('signForm.verifiedSessionRequired'))
+    const resendBtn = screen.getByRole('button', { name: i18n.t('signForm.sendSessionLink') })
+    expect(resendBtn).not.toBeDisabled()
+
+    fireEvent.click(resendBtn)
+    await waitFor(() => expect(api.resendVerificationEmail).toHaveBeenCalledWith({
+      email: 'test@example.com',
+    }))
+  })
 })

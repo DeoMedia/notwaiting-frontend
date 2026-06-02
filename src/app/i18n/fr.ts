@@ -422,6 +422,8 @@ export const fr: Translations = {
     genericError: "Une erreur s'est produite. Veuillez réessayer.",
     captchaRequired: 'Veuillez compléter le défi captcha.',
     emailNotVerified: "L'e-mail n'est pas vérifié. Vérifiez votre boîte de réception ou renvoyez le lien ci-dessous.",
+    verifiedSessionRequired: "Cet e-mail est déjà vérifié, mais ce navigateur doit être confirmé. Envoyez-vous un nouveau lien ci-dessous.",
+    sendSessionLink: 'Envoyer un lien de connexion',
     resendVerification: "Renvoyer l'e-mail de vérification",
     resendSending: 'Envoi…',
     resendSent: 'E-mail envoyé — consultez votre boîte de réception',

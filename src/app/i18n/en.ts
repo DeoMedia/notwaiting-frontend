@@ -419,6 +419,8 @@ export const en = {
     genericError: 'Something went wrong. Please try again.',
     captchaRequired: 'Please complete the captcha challenge.',
     emailNotVerified: 'Email is not verified. Check your inbox for the verification link, or resend it below.',
+    verifiedSessionRequired: 'This email is already verified, but this browser needs to be confirmed. Send yourself a fresh link below.',
+    sendSessionLink: 'Send sign-in link',
     resendVerification: 'Resend verification email',
     resendSending: 'Sending…',
     resendSent: 'Email sent — check your inbox',
