@@ -4,10 +4,22 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Textarea } from './Textarea';
-import { generateCaption, trackAction } from '../utils/api';
+import { generateCaption, trackAction, publishStory } from '../utils/api';
 import { copyToClipboard } from '../utils/clipboard';
 import { SocialShareModal, type SharePlatform } from './SocialShareModal';
 import { useLocalizedSectors } from '../i18n/hooks';
+import { formatSubmitError } from '../utils/submitError';
+import { CharacterCount } from './CharacterCount';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import {
   LIMITS,
   validateAiCaption,
@@ -19,10 +31,12 @@ import {
 interface Props {
   signerId: string | null
   firstName: string
+  email?: string
+  country?: string
 }
 
 export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
-  ({ signerId, firstName }, ref) => {
+  ({ signerId, firstName, email, country }, ref) => {
     const { t } = useTranslation()
     const sectors = useLocalizedSectors()
     const sectorOptions = sectors.map(s => ({ value: s.value, label: s.label }))
@@ -43,6 +57,7 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
       platform: SharePlatform
       onContinue: () => void
     } | null>(null)
+    const [showPostConfirm, setShowPostConfirm] = useState(false)
 
     const flashStatus = (kind: 'info' | 'error', text: string) => {
       setStatusMessage({ kind, text })
@@ -59,14 +74,17 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
     const effectiveCategory = () => category === 'other' ? customCategory || 'tech' : category || 'tech'
 
     const generate = async (style?: 'shorter' | 'bold') => {
-      const result = validateAiCaption({
-        category,
-        customCategory,
-        about,
-        name,
-        detail,
-        prompt,
-      }, t)
+      const data = {
+        category, customCategory, about, name, detail, prompt,
+      }
+
+      if (prompt.length > LIMITS.aiPrompt) {
+        setFieldErrors(prev => ({ ...prev, prompt: t('validation.promptLong', { n: LIMITS.aiPrompt }) }))
+        flashStatus('error', t('validation.promptLong', { n: LIMITS.aiPrompt }))
+        return
+      }
+
+      const result = validateAiCaption(data, t)
       if (!result.valid) {
         setFieldErrors(result.errors)
         flashStatus('error', firstError(result.errors) ?? t('aiCaption.pleaseComplete'))
@@ -151,7 +169,33 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
     }
 
     const postToWall = async () => {
-      flashStatus('error', t('aiCaption.signFirst'))
+      if (!signerId) {
+        flashStatus('error', t('aiCaption.signFirst'))
+        return
+      }
+      setShowPostConfirm(true)
+    }
+
+    const confirmPost = async () => {
+      setShowPostConfirm(false)
+      setLoading(true)
+      try {
+        await publishStory({
+          firstName,
+          country: country || '',
+          email: email || '',
+          wave: effectiveCategory(),
+          caption: currentText,
+          waveTag: effectiveCategory(),
+        })
+        flashStatus('info', t('aiCaption.storyLive'))
+        void trackAction({ action: 'shared_story', metadata: { source: 'ai_helper' } })
+      } catch (err) {
+        const info = formatSubmitError(err, t, 'aiCaption.couldNotPublish')
+        flashStatus('error', info.message)
+      } finally {
+        setLoading(false)
+      }
     }
 
     return (
@@ -268,7 +312,6 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
                 <Input
                   name="ai-detail"
                   type="text"
-                  maxLength={LIMITS.aiDetail}
                   placeholder={t('aiCaption.detailPlaceholder')}
                   value={detail}
                   error={fieldErrors.detail}
@@ -277,7 +320,7 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
                     if (fieldErrors.detail) setFieldErrors(prev => ({ ...prev, detail: undefined }))
                   }}
                 />
-                <p className="text-xs text-gray-500 mt-2">{detail.length}/{LIMITS.aiDetail} {t('contact.charactersSuffix')}</p>
+                <CharacterCount current={detail.length} limit={LIMITS.aiDetail} />
               </div>
 
               <div>
@@ -285,7 +328,6 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
                 <Textarea
                   name="ai-prompt"
                   rows={3}
-                  maxLength={LIMITS.aiPrompt}
                   value={prompt}
                   error={fieldErrors.prompt}
                   onChange={(e) => {
@@ -295,7 +337,7 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
                   placeholder={t('aiCaption.promptPlaceholder')}
                   className="bg-[#F5F5F5]"
                 />
-                <p className="text-xs text-gray-500 mt-2">{prompt.length}/{LIMITS.aiPrompt} · {t('aiCaption.promptHint')}</p>
+                <CharacterCount current={prompt.length} limit={LIMITS.aiPrompt} hint={`· ${t('aiCaption.promptHint')}`} />
               </div>
 
               <Button onClick={() => generate()} className="w-full py-5 text-lg" disabled={loading}>
@@ -403,6 +445,23 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
           }}
           onCancel={() => setPendingShare(null)}
         />
+
+        <AlertDialog open={showPostConfirm} onOpenChange={setShowPostConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('signForm.shareChoiceHeader')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('signForm.wallTooltip')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmPost} className="bg-[#DD3935] hover:bg-[#AA0000]">
+                {t('common.next')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </section>
     )
   }
