@@ -337,7 +337,8 @@ export const AiCaptionHelper = forwardRef<HTMLElement, Props>(
                   placeholder={t('aiCaption.promptPlaceholder')}
                   className="bg-[#F5F5F5]"
                 />
-                <CharacterCount current={prompt.length} limit={LIMITS.aiPrompt} hint={`· ${t('aiCaption.promptHint')}`} />
+                <CharacterCount current={prompt.length} limit={LIMITS.aiPrompt} />
+                <p className="text-xs text-gray-500 mt-1">· {t('aiCaption.promptHint')}</p>
               </div>
 
               <Button onClick={() => generate()} className="w-full py-5 text-lg" disabled={loading}>

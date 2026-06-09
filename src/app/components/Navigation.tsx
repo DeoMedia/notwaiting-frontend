@@ -60,7 +60,7 @@ export function Navigation() {
   ];
 
   return (
-    <nav className="bg-[#DD3935] text-white sticky top-0 z-50 border-b border-white/10">
+    <nav className="bg-[#DD3935] text-white fixed top-0 left-0 right-0 z-50 border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between md:grid md:grid-cols-[auto_1fr_auto] md:items-center md:gap-8">
           <Link
