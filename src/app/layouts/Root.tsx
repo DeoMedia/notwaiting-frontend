@@ -60,7 +60,7 @@ export default function Root() {
       <ScrollToTopOnRouteChange />
       <Navigation />
 
-      <main className="flex-1">
+      <main className="flex-1 pt-[72px]">
         <ErrorBoundary>
           <Suspense fallback={<RouteFallback />}>
             <Outlet />

@@ -12,6 +12,7 @@ import { copyToClipboard } from '../utils/clipboard';
 import { SocialShareModal, type SharePlatform } from './SocialShareModal';
 import waveImage from '../../styles/waves.png';
 import { AiStoryQuestionnaire } from './AiStoryQuestionnaire';
+import { CharacterCount } from './CharacterCount';
 import { useLocalizedCountriesWithPlaceholder, useLocalizedSectors } from '../i18n/hooks';
 import {
   LIMITS,
@@ -76,6 +77,12 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
     const [honeypot, setHoneypot]       = useState('')
     const [captchaToken, setCaptchaToken] = useState('')
     const captchaRef = useRef<CaptchaHandle>(null)
+    const [statusMessage, setStatusMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null)
+
+    const flashStatus = (kind: 'info' | 'error', text: string) => {
+      setStatusMessage({ kind, text })
+      setTimeout(() => setStatusMessage(curr => (curr?.text === text ? null : curr)), 4000)
+    }
 
     // Clear any previously-issued hCaptcha token and ask the widget to show
     // a fresh challenge. Called after every failed submit so the user isn't
@@ -123,7 +130,9 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       const result = validateManifesto(formData, { requireWave: true, requireStory: true }, t)
       setFieldErrors(result.errors)
       if (!result.valid) {
-        setError(firstError(result.errors) ?? t('signForm.pleaseComplete'))
+        const message = firstError(result.errors) ?? t('signForm.pleaseComplete')
+        flashStatus('error', message)
+        setError(message)
         setErrorKind('other')
       } else {
         setError('')
@@ -235,7 +244,9 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       if (!runValidation()) return
 
       if (isCaptchaEnabled() && !captchaToken) {
-        setError(t('signForm.captchaRequired'))
+        const message = t('signForm.captchaRequired')
+        flashStatus('error', message)
+        setError(message)
         setErrorKind('captcha')
         return
       }
@@ -261,6 +272,7 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
             company: honeypot,
             captchaToken: captchaToken || undefined,
           })
+          flashStatus('info', t('aiCaption.storyLive'))
 
           setIsLeaving(true)
           onSuccess('', formData.firstName)
@@ -299,7 +311,9 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
       } catch (err: unknown) {
         const info = formatSubmitError(err, t, 'signForm.genericError')
         if (err instanceof ApiError && err.code === 'email_not_verified') {
-          setError(t('signForm.emailNotVerified', { defaultValue: info.message || 'Email is not verified' }))
+          const message = t('signForm.emailNotVerified', { defaultValue: info.message || 'Email is not verified' })
+          flashStatus('error', message)
+          setError(message)
           setErrorKind('verification')
           // The publish endpoint already sent a verification email as part of
           // this attempt — reflect that and gate resend so the user can't fire a
@@ -308,6 +322,7 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
           setResendCooldown(RESEND_COOLDOWN_SECONDS)
           setRetryableIntent(null)
         } else {
+          flashStatus('error', info.message)
           setError(info.message)
           setErrorKind(info.retryable ? 'network' : 'other')
           setRetryableIntent(info.retryable ? intent : null)
@@ -328,6 +343,20 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                 <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight mb-4">{t('signForm.title')}</h2>
                 <p className="text-xl max-w-3xl mx-auto">{t('signForm.subtitle')}</p>
               </div>
+
+              {statusMessage && (
+                <div
+                  role={statusMessage.kind === 'error' ? 'alert' : 'status'}
+                  aria-live="polite"
+                  className={`mb-8 px-4 py-3 text-sm font-mono border-2 ${
+                    statusMessage.kind === 'error'
+                      ? 'border-[#DD3935] text-[#DD3935] bg-white'
+                      : 'border-[#0C0C0A] text-[#0C0C0A] bg-[#F5F5F5]'
+                  }`}
+                >
+                  {statusMessage.text}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-[0.95fr_1.05fr] gap-8 md:gap-10 items-start">
                 <div className="hidden md:block relative w-full min-h-[760px] overflow-hidden md:-ml-20">
@@ -489,14 +518,13 @@ export const ManifestoSignForm = forwardRef<HTMLDivElement, Props>(
                           name="story"
                           rows={6}
                           required
-                          maxLength={LIMITS.story}
                           placeholder={t('signForm.storyPlaceholder')}
                           value={formData.story}
                           error={fieldErrors.story}
                           onChange={(e) => updateField('story', e.target.value)}
                           className="bg-white"
                         />
-                        <p className="text-xs text-gray-500 mt-1">{formData.story.length}/{LIMITS.story} {t('contact.charactersSuffix')}</p>
+                        <CharacterCount current={formData.story.length} limit={LIMITS.story} />
                       </>
                     )}
                   </div>
