@@ -1,9 +1,9 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
-import { ManifestoSignForm } from '../components/ManifestoSignForm';
-import { ManifestoInlineForm } from '../components/ManifestoInlineForm';
-import { StoriesSlider } from '../components/StoriesSlider';
+// import { ManifestoSignForm } from '../components/ManifestoSignForm'; // section commented out
+// import { ManifestoInlineForm } from '../components/ManifestoInlineForm'; // section moved to the Manifesto page
+// import { StoriesSlider } from '../components/StoriesSlider'; // section commented out
 import { StatsSection } from '../components/StatsSection';
 import { HeroOverlay } from '../components/HeroOverlay';
 // import heroDesktop1 from '../../styles/Landing1.webp';
@@ -19,13 +19,16 @@ import waveMarkExample from '../../styles/wave_mark_sample.jpeg';
 import { useNavigate, useLocation } from 'react-router';
 import { getSignerCount } from '../utils/api';
 
-let manifestoAutoScrolled = false;
+// Manifesto auto-scroll disabled — flag no longer used.
+// let manifestoAutoScrolled = false;
 
 type ManifestoStats = {
   total_signers: number
   total_countries: number
 }
 
+// Moved to the Manifesto page along with the "Sign the Manifesto" section.
+/*
 function AnimatedManifestoNumber({ value, active }: { value: number; active: boolean }) {
   const [displayValue, setDisplayValue] = useState(0)
   const displayValueRef = useRef(0)
@@ -66,6 +69,7 @@ function AnimatedManifestoNumber({ value, active }: { value: number; active: boo
 
   return <span className="font-black text-[#DD3935]">{displayValue.toLocaleString()}</span>
 }
+*/
 
 export default function Home() {
   const navigate = useNavigate()
@@ -118,10 +122,10 @@ export default function Home() {
 
   const [activeHero, setActiveHero] = useState(0)
   const [manifestoStats, setManifestoStats] = useState<ManifestoStats | null>(null)
-  const [manifestoCounterActive, setManifestoCounterActive] = useState(false)
+  // const [manifestoCounterActive, setManifestoCounterActive] = useState(false) // moved to the Manifesto page
 
   const signOnRef = useRef<HTMLDivElement>(null)
-  const manifestoRef = useRef<HTMLElement>(null)
+  // const manifestoRef = useRef<HTMLElement>(null) // moved to the Manifesto page
   const displayedManifestoStats = manifestoStats ?? { total_signers: 0, total_countries: 0 }
 
   const loadManifestoStats = useCallback(async () => {
@@ -146,6 +150,8 @@ export default function Home() {
     loadManifestoStats()
   }, [loadManifestoStats])
 
+  // Manifesto signer-counter observer moved to the Manifesto page.
+  /*
   useEffect(() => {
     if (!manifestoRef.current || manifestoCounterActive) return
 
@@ -163,26 +169,27 @@ export default function Home() {
 
     return () => observer.disconnect()
   }, [manifestoCounterActive])
+  */
 
   // Auto-scroll to manifesto on first mount per page load.
   // Module-level flag resets on hard refresh but persists across SPA route changes.
-  useEffect(() => {
-    if (manifestoAutoScrolled) return
-    manifestoAutoScrolled = true
-    const timer = setTimeout(() => {
-      manifestoRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [])
+  // Disabled — manifesto auto-scroll removed.
+  // useEffect(() => {
+  //   if (manifestoAutoScrolled) return
+  //   manifestoAutoScrolled = true
+  //   const timer = setTimeout(() => {
+  //     manifestoRef.current?.scrollIntoView({ behavior: 'smooth' })
+  //   }, 2000)
+  //   return () => clearTimeout(timer)
+  // }, [])
 
   const scrollToSignOn = () => signOnRef.current?.scrollIntoView({ behavior: 'smooth' })
 
   // Routed here with intent to write a story (the "Write your story" CTA on
-  // /welcome)? Suppress the manifesto auto-scroll so it doesn't fight us for
-  // the viewport. Set during render — before the auto-scroll effect runs and
-  // schedules its competing scroll.
+  // /welcome)? Scroll straight to the sign-on form below.
   const wantsSignOn = (location.state as { scrollTo?: string } | null)?.scrollTo === 'signOn'
-  if (wantsSignOn) manifestoAutoScrolled = true
+  // Manifesto auto-scroll disabled, so no suppression needed here.
+  // if (wantsSignOn) manifestoAutoScrolled = true
 
   // Scroll straight to the "Add your wave" form on arrival.
   useEffect(() => {
@@ -193,9 +200,10 @@ export default function Home() {
     return () => clearTimeout(timer)
   }, [wantsSignOn])
 
-  const handleSignSuccess = (_id: string, _name: string) => {
-    loadManifestoStats()
-  }
+  // Used by the commented-out "Add Your Wave." sign form.
+  // const handleSignSuccess = (_id: string, _name: string) => {
+  //   loadManifestoStats()
+  // }
 
   return (
     <div className="min-h-screen bg-white">
@@ -230,7 +238,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Manifesto text ─── */}
+      {/* ── Sign the Manifesto — moved to the Manifesto page (/manifesto). ── */}
+      {/*
       <section ref={manifestoRef} className="relative bg-white py-20 md:py-32 px-6 overflow-hidden">
         <div className="max-w-3xl mx-auto relative z-10">
           <h2 className="-mt-10 text-4xl md:text-6xl font-black uppercase tracking-tight text-center mb-8">{t('home.manifestoTitle')}</h2>
@@ -278,9 +287,12 @@ export default function Home() {
           </div>
         </div>
       </section>
+      */}
 
       {/* ── Sign form ─── */}
-      <ManifestoSignForm ref={signOnRef} onSuccess={handleSignSuccess} />
+      {/* "Add Your Wave." section — commented out. */}
+      {/* <ManifestoSignForm ref={signOnRef} onSuccess={handleSignSuccess} /> */}
+
 
       {/* ── Wave mark teaser ─── */}
       <section className="bg-[#EBBD06] text-[#0C0C0A] py-20 md:py-32 px-6">
@@ -314,6 +326,17 @@ export default function Home() {
         </div>
       </section>
 
+
+   {/* ── Sign the Manifesto CTA ─── */}
+      <section className="bg-white py-16 md:py-24 px-6">
+        <div className="max-w-3xl mx-auto flex justify-center">
+          <Button onClick={() => navigate('/manifesto')} className="text-base md:text-lg px-10 py-5">
+            {t('home.signCta')}
+          </Button>
+        </div>
+      </section>
+
+
       {/* ── Stats section ─── */}
       <StatsSection
         onJoinClick={scrollToSignOn}
@@ -322,7 +345,8 @@ export default function Home() {
       />
 
       {/* ── Stories slider ─── */}
-      <StoriesSlider />
+      {/* "Waves from the community" section — commented out. */}
+      {/* <StoriesSlider /> */}
 
       {/* ── Protocol ─── */}
       <section className="bg-[#F5F5F5] py-28 px-6">

@@ -13,7 +13,7 @@ import Root from './layouts/Root';
 const Home          = lazy(() => import('./pages/Home'));
 const About         = lazy(() => import('./pages/About'));
 const Manifesto     = lazy(() => import('./pages/Manifesto'));
-const Stories       = lazy(() => import('./pages/Stories'));
+// const Stories       = lazy(() => import('./pages/Stories')); // route commented out
 const Partners      = lazy(() => import('./pages/Partners'));
 const Contact       = lazy(() => import('./pages/Contact'));
 const GetMark       = lazy(() => import('./pages/GetMark'));
@@ -31,7 +31,7 @@ export const router = createBrowserRouter([
       { index: true, Component: Home },
       { path: 'about', Component: About },
       { path: 'manifesto', Component: Manifesto },
-      { path: 'stories', Component: Stories },
+      // { path: 'stories', Component: Stories }, // route commented out
       { path: 'partners', Component: Partners },
       { path: 'contact', Component: Contact },
       { path: 'dashboard', Component: Dashboard },

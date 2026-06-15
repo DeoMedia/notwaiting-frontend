@@ -191,12 +191,6 @@ export default function About() {
                 {t('about.signCta')}
               </Button>
             </Link>
-            <Link
-              to="/stories"
-              className="font-mono inline-block border-2 border-[#0C0C0A] text-[#0C0C0A] font-bold uppercase tracking-wide px-10 py-4 hover:bg-[#027a4f] hover:text-white transition-colors"
-            >
-              Read the stories →
-            </Link>
           </div>
         </div>
       </section>
