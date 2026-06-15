@@ -36,4 +36,6 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
           server-dir: /public_html/
+          # The current host rejects FTPS AUTH ("500 AUTH not understood").
+          # Keep plain FTP until host support for SFTP/FTPS is available.
           protocol: ftp
