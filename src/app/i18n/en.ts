@@ -134,6 +134,11 @@ export const en = {
     line3: 'So Wear the Mark. Declare your Wave. Pass it on',
     slideAria: 'Go to slide {{n}}',
     campaignAlt: '#NotWaiting campaign {{n}}',
+    playAria: 'Play campaign video',
+    pauseAria: 'Pause video and return to images',
+    muteAria: 'Mute video',
+    unmuteAria: 'Unmute video',
+    videoAria: '#NotWaiting campaign video',
   },
   home: {
     manifestoTitle: 'Sign the Manifesto',
