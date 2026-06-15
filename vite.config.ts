@@ -44,6 +44,17 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,woff2}'],
+        // Raise the precache size limit to 5 MB to accommodate large hero images.
+        // The default is 2 MB — PhoneLandingmobile-02.png exceeds that at 2.86 MB.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // Exclude the heaviest hero images from precache — they load fast enough
+        // on demand and caching them bloats the service worker install payload.
+        globIgnores: [
+          '**/PhoneLandingmobile-02*',
+          '**/PhoneLandingmobile-03*',
+          '**/Landing1*',
+          '**/Landing3*',
+        ],
         // Do not runtime-cache backend API responses. Auth cookies and
         // per-user data must never be served stale on shared devices.
         runtimeCaching: [],

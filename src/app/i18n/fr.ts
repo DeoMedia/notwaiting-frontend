@@ -137,6 +137,12 @@ export const fr: Translations = {
     line3: 'Alors portez la marque. Affirmez votre vague. Passez le mot.',
     slideAria: 'Aller à la diapositive {{n}}',
     campaignAlt: 'Campagne #NotWaiting {{n}}',
+    playAria: 'Lire la vidéo de la campagne',
+    pauseAria: 'Mettre en pause et revenir aux images',
+    muteAria: 'Couper le son',
+    unmuteAria: 'Rétablir le son',
+    videoAria: 'Vidéo de la campagne #NotWaiting',
+    watchLabel: 'Regarder notre histoire',
   },
   home: {
     manifestoTitle: 'Signez le manifeste',
