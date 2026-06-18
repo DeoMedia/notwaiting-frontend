@@ -82,63 +82,105 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="py-20 md:py-32 px-6">
+
+      {/* ── HERO HEADER ─────────────────────────────────────── */}
+      <section className="bg-[#EBBD06] text-[#0C0C0A] py-20 md:py-32 px-6">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tight mb-8 text-center">
+          <h1 className="font-druk font-bold text-5xl sm:text-7xl md:text-8xl uppercase leading-[0.9] tracking-tight mb-6">
             {t('contact.title')}
           </h1>
-          <p className="text-xl text-center mb-16">
+
+          <div className="grid grid-cols-3 h-[5px] max-w-xs mb-10">
+            <div className="bg-[#DD3935]" />
+            <div className="bg-[#0C0C0A]" />
+            <div className="bg-[#027A4F]" />
+          </div>
+
+          <p className="font-druk font-bold text-xl md:text-2xl leading-tight max-w-2xl">
             {t('contact.subtitle')}
           </p>
+        </div>
+      </section>
 
-          <div className="grid md:grid-cols-2 gap-12 mb-16">
+      {/* ── CONTACT INFO + FORM ─────────────────────────────── */}
+      <section className="py-16 md:py-24 px-6 border-b border-[#0C0C0A]/10">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 md:gap-16">
+
+            {/* ── Contact info column ── */}
             <div>
-              <h2 className="text-3xl font-black uppercase mb-6">{t('contact.contactInfoTitle')}</h2>
-              <div className="space-y-6">
-                <div className="border-l-4 border-[#dd3935] pl-6">
-                  <div className="text-sm font-mono uppercase mb-1">{t('contact.generalInquiries')}</div>
-                  <a href="mailto:hello@notwaiting.africa" className="text-lg hover:text-[#dd3935]">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="h-8 w-1.5 flex-shrink-0 bg-[#DD3935]" />
+                <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[#DD3935]">
+                  {t('contact.contactInfoTitle')}
+                </p>
+              </div>
+
+              <div className="md:pl-6 space-y-5">
+                <div className="bg-[#F5F5F5] p-5" style={{ borderLeft: '4px solid #DD3935' }}>
+                  <div className="font-mono text-xs uppercase tracking-wide text-[#0C0C0A]/60 mb-1">
+                    {t('contact.generalInquiries')}
+                  </div>
+                  <a href="mailto:hello@notwaiting.africa" className="font-druk font-bold text-base hover:text-[#DD3935] transition-colors">
                     hello@notwaiting.africa
                   </a>
                 </div>
 
-                <div className="border-l-4 border-[#dd3935] pl-6">
-                  <div className="text-sm font-mono uppercase mb-1">{t('contact.partnerships')}</div>
-                  <a href="mailto:partners@notwaiting.africa" className="text-lg hover:text-[#dd3935]">
+                <div className="bg-[#F5F5F5] p-5" style={{ borderLeft: '4px solid #DD3935' }}>
+                  <div className="font-mono text-xs uppercase tracking-wide text-[#0C0C0A]/60 mb-1">
+                    {t('contact.partnerships')}
+                  </div>
+                  <a href="mailto:partners@notwaiting.africa" className="font-druk font-bold text-base hover:text-[#DD3935] transition-colors">
                     partners@notwaiting.africa
                   </a>
                 </div>
 
-                <div className="border-l-4 border-[#dd3935] pl-6">
-                  <div className="text-sm font-mono uppercase mb-1">{t('contact.mediaPress')}</div>
-                  <a href="mailto:press@notwaiting.africa" className="text-lg hover:text-[#dd3935]">
+                <div className="bg-[#F5F5F5] p-5" style={{ borderLeft: '4px solid #DD3935' }}>
+                  <div className="font-mono text-xs uppercase tracking-wide text-[#0C0C0A]/60 mb-1">
+                    {t('contact.mediaPress')}
+                  </div>
+                  <a href="mailto:press@notwaiting.africa" className="font-druk font-bold text-base hover:text-[#DD3935] transition-colors">
                     press@notwaiting.africa
                   </a>
                 </div>
 
-                <div className="border-l-4 border-[#dd3935] pl-6">
-                  <div className="text-sm font-mono uppercase mb-1">{t('contact.storySubmissions')}</div>
-                  <a href="mailto:stories@notwaiting.africa" className="text-lg hover:text-[#dd3935]">
+                <div className="bg-[#F5F5F5] p-5" style={{ borderLeft: '4px solid #DD3935' }}>
+                  <div className="font-mono text-xs uppercase tracking-wide text-[#0C0C0A]/60 mb-1">
+                    {t('contact.storySubmissions')}
+                  </div>
+                  <a href="mailto:stories@notwaiting.africa" className="font-druk font-bold text-base hover:text-[#DD3935] transition-colors">
                     stories@notwaiting.africa
                   </a>
                 </div>
               </div>
 
               <div className="mt-12">
-                <h3 className="text-2xl font-black uppercase mb-4">{t('contact.followWave')}</h3>
-                <div className="flex gap-4 text-sm">
-                  <a href="https://x.com/_notwaiting_" target="_blank" rel="noopener noreferrer" className="hover:text-[#dd3935] transition-colors">{t('contact.socialTwitter')}</a>
-                  <a href="https://www.instagram.com/notwaiting.africa/" target="_blank" rel="noopener noreferrer" className="hover:text-[#dd3935] transition-colors">{t('contact.socialInstagram')}</a>
-                  <a href="https://www.linkedin.com/company/not-waiting/" target="_blank" rel="noopener noreferrer" className="hover:text-[#dd3935] transition-colors">{t('contact.socialLinkedIn')}</a>
-                  <a href="https://www.youtube.com/@notwaitingAfrica" target="_blank" rel="noopener noreferrer" className="hover:text-[#dd3935] transition-colors">{t('contact.socialYouTube')}</a>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="h-8 w-1.5 flex-shrink-0 bg-[#027A4F]" />
+                  <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[#027A4F]">
+                    {t('contact.followWave')}
+                  </p>
+                </div>
+                <div className="md:pl-6 flex flex-wrap gap-x-5 gap-y-2 font-mono text-sm uppercase tracking-wide">
+                  <a href="https://x.com/_notwaiting_" target="_blank" rel="noopener noreferrer" className="hover:text-[#DD3935] transition-colors">{t('contact.socialTwitter')}</a>
+                  <a href="https://www.instagram.com/notwaiting.africa/" target="_blank" rel="noopener noreferrer" className="hover:text-[#DD3935] transition-colors">{t('contact.socialInstagram')}</a>
+                  <a href="https://www.linkedin.com/company/not-waiting/" target="_blank" rel="noopener noreferrer" className="hover:text-[#DD3935] transition-colors">{t('contact.socialLinkedIn')}</a>
+                  <a href="https://www.youtube.com/@notwaitingAfrica" target="_blank" rel="noopener noreferrer" className="hover:text-[#DD3935] transition-colors">{t('contact.socialYouTube')}</a>
                 </div>
               </div>
             </div>
 
+            {/* ── Form column ── */}
             <div>
-              {!formSubmitted ? (
-                <>
-                  <h2 className="text-3xl font-black uppercase mb-6">{t('contact.sendMessage')}</h2>
+              <div className="flex items-center gap-4 mb-8">
+                <div className="h-8 w-1.5 flex-shrink-0 bg-[#EBBD06]" />
+                <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[#EBBD06]">
+                  {formSubmitted ? t('contact.sentTitle') : t('contact.sendMessage')}
+                </p>
+              </div>
+
+              <div className="md:pl-6">
+                {!formSubmitted ? (
                   <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                     <Honeypot value={honeypot} onChange={setHoneypot} />
                     <Input
@@ -210,31 +252,36 @@ export default function Contact() {
                       {submitting ? (t('submitting') ?? 'Sending…') : t('contact.submit')}
                     </Button>
                   </form>
-                </>
-              ) : (
-                <div className="bg-[#F5F5F5] p-8 border-2 border-[#0C0C0A] text-center">
-                  <h2 className="text-3xl font-black uppercase mb-4">{t('contact.sentTitle')}</h2>
-                  <p className="text-lg mb-6">
-                    {t('contact.sentBody', { name: formData.name })}
-                  </p>
-                  <Button onClick={() => setFormSubmitted(false)} variant="secondary">
-                    {t('contact.sendAnother')}
-                  </Button>
-                </div>
-              )}
+                ) : (
+                  <div className="bg-[#F5F5F5] p-8 border-2 border-[#0C0C0A] text-center">
+                    <p className="font-druk font-bold text-lg mb-4">
+                      {t('contact.sentBody', { name: formData.name })}
+                    </p>
+                    <Button onClick={() => setFormSubmitted(false)} variant="secondary">
+                      {t('contact.sendAnother')}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-
-          <div className="bg-[#0C0C0A] text-white p-12 text-center">
-            <h2 className="text-4xl font-black uppercase mb-4">{t('contact.joinTitle')}</h2>
-            <p className="text-xl mb-6">
-              {t('contact.joinBody')}
-            </p>
-            <p className="text-lg mb-2">{t('contact.joinLine1')}</p>
-            <p className="text-sm text-white/60">{t('contact.joinLine2')}</p>
           </div>
         </div>
       </section>
+
+      {/* ── CTA FOOTER ──────────────────────────────────────── */}
+      <section className="bg-[#F5F5F5] py-20 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="font-druk font-bold text-3xl md:text-5xl uppercase mb-6">
+            {t('contact.joinTitle')}
+          </h2>
+          <p className="font-mono text-base text-[#0C0C0A]/70 mb-2 max-w-md mx-auto leading-relaxed">
+            {t('contact.joinBody')}
+          </p>
+          <p className="font-mono text-sm text-[#0C0C0A]/70 mb-1">{t('contact.joinLine1')}</p>
+          <p className="font-mono text-xs text-[#0C0C0A]/40">{t('contact.joinLine2')}</p>
+        </div>
+      </section>
+
     </div>
   );
 }

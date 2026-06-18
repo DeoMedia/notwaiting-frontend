@@ -34,6 +34,7 @@ export const fr: Translations = {
     about: 'À propos',
     manifesto: 'Manifeste',
     stories: 'Histoires',
+    gallery: 'Galerie',
     partners: 'Partenaires',
     contact: 'Contact',
     toggleMenu: 'Ouvrir le menu',
@@ -999,5 +1000,35 @@ export const fr: Translations = {
     answerLong: 'La réponse doit contenir au maximum {{n}} caractères.',
     passwordRequired: 'Le mot de passe est requis.',
     passwordLong: 'Le mot de passe doit contenir au maximum {{n}} caractères.',
+  },
+  gallery: {
+    heading1: 'Galerie',
+    lead: 'Un aperçu des bâtisseurs, des moments et de la marque — capturés à mesure que le mouvement grandit.',
+    albumsLabel: 'Albums',
+    itemsSuffix: 'photos',
+    backToAlbums: 'Retour aux albums',
+    videosLabel: 'Vidéos',
+    markLabel: 'La Marque',
+    markTitle: 'Portez la vague',
+    markBody: 'La Marque de la Vague est le signe que les bâtisseurs font partie du mouvement. Générez la vôtre et ajoutez-la à votre travail.',
+    markCta: 'Obtenir votre marque',
+    albums: {
+      campaignLaunch: {
+        title: 'Lancement de la campagne',
+        desc: 'Là où tout a commencé — la première vague de bâtisseurs déclarant #NotWaiting.',
+      },
+      builders: {
+        title: 'Bâtisseurs sur la vague',
+        desc: 'Les créateurs, fondateurs et innovateurs qui mènent dès maintenant.',
+      },
+      community: {
+        title: 'Histoires de la communauté',
+        desc: 'Des moments partagés par les personnes qui rendent cela impossible à ignorer.',
+      },
+    },
+    videos: {
+      clip1: 'Récapitulatif du lancement',
+      clip2: 'Les bâtisseurs racontent leur histoire',
+    },
   },
 };

@@ -22,6 +22,7 @@ const FAQ           = lazy(() => import('./pages/FAQ'));
 const Privacy       = lazy(() => import('./pages/Privacy'));
 const AiPrompt      = lazy(() => import('./pages/AiPrompt'));
 const Welcome       = lazy(() => import('./pages/Welcome'));
+const Gallery       = lazy(() => import('./pages/Gallery'));
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: 'privacy', Component: Privacy },
       { path: 'ai-prompt', Component: AiPrompt },
       { path: 'welcome', Component: Welcome },
+      { path: 'gallery', Component: Gallery },
     ]
   },
   {

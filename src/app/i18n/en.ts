@@ -31,6 +31,7 @@ export const en = {
     about: 'About',
     manifesto: 'Manifesto',
     stories: 'Stories',
+    gallery: 'Gallery',
     partners: 'Partners',
     contact: 'Contact',
     toggleMenu: 'Toggle menu',
@@ -995,6 +996,36 @@ export const en = {
     answerLong: 'Answer must be {{n}} characters or fewer.',
     passwordRequired: 'Password is required.',
     passwordLong: 'Password must be {{n}} characters or fewer.',
+  },
+  gallery: {
+    heading1: 'Gallery',
+    lead: 'A look at the builders, the moments, and the mark — captured as the movement grows.',
+    albumsLabel: 'Albums',
+    itemsSuffix: 'photos',
+    backToAlbums: 'Back to albums',
+    videosLabel: 'Videos',
+    markLabel: 'The Mark',
+    markTitle: 'Wear the wave',
+    markBody: "The Wave Mark is how builders signal they're part of the movement. Generate yours and add it to your work.",
+    markCta: 'Get your mark',
+    albums: {
+      campaignLaunch: {
+        title: 'Campaign Launch',
+        desc: 'Where it all started — the first wave of builders declaring #NotWaiting.',
+      },
+      builders: {
+        title: 'Builders on the Wave',
+        desc: 'The creators, founders, and innovators leading right now.',
+      },
+      community: {
+        title: 'Community Stories',
+        desc: 'Moments shared by the people making it impossible to ignore.',
+      },
+    },
+    videos: {
+      clip1: 'Campaign launch recap',
+      clip2: 'Builders share their story',
+    },
   },
 };
 

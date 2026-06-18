@@ -35,50 +35,6 @@ type ManifestoStats = {
   total_countries: number
 }
 
-// Moved to the Manifesto page along with the "Sign the Manifesto" section.
-/*
-function AnimatedManifestoNumber({ value, active }: { value: number; active: boolean }) {
-  const [displayValue, setDisplayValue] = useState(0)
-  const displayValueRef = useRef(0)
-
-  useEffect(() => {
-    if (!active) return
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setDisplayValue(value)
-      displayValueRef.current = value
-      return
-    }
-
-    const from = displayValueRef.current
-    const difference = value - from
-    const duration = 1200
-    const startedAt = performance.now()
-    let frame = 0
-
-    const tick = (now: number) => {
-      const progress = Math.min((now - startedAt) / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      const nextValue = Math.round(from + difference * eased)
-      displayValueRef.current = nextValue
-      setDisplayValue(nextValue)
-
-      if (progress < 1) {
-        frame = requestAnimationFrame(tick)
-      } else {
-        displayValueRef.current = value
-      }
-    }
-
-    frame = requestAnimationFrame(tick)
-
-    return () => cancelAnimationFrame(frame)
-  }, [active, value])
-
-  return <span className="font-black text-[#DD3935]">{displayValue.toLocaleString()}</span>
-}
-*/
-
 // ── Play / Pause icon SVGs (inline, no extra dependency) ─────────────────────
 function PlayIcon() {
   return (
@@ -126,12 +82,10 @@ export default function Home() {
   const isFr     = i18n.language.startsWith('fr')
   const videoSrc = isFr ? VIDEO_FR : VIDEO_EN
 
-  // Sync muted state imperatively — React doesn't update the muted attribute reactively.
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = isMuted
   }, [isMuted])
 
-  // When language switches while video is playing, reload with the new source.
   useEffect(() => {
     if (!isVideoMode || !videoRef.current) return
     videoRef.current.load()
@@ -173,44 +127,33 @@ export default function Home() {
       overlay: {
         align: 'center',
         className:
-          'top-[2%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:left-auto md:-translate-x-0 md:-translate-y-1/2 md:right-[18%] md:w-[48%]',
+          'top-[3%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:left-auto md:-translate-x-0 md:-translate-y-1/2 md:right-[18%] md:w-[48%]',
       },
     },
     {
       desktop: heroDesktop1,
       mobile: heroMobile2,
       overlay: {
-        align: 'left',
+        align: 'center',
         className:
-          'top-[6%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:-translate-y-1/2 md:left-[6%] md:translate-x-0 md:w-[42%]',
+          'top-[3%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:-translate-y-1/2 md:left-[6%] md:translate-x-0 md:w-[42%]',
       },
     },
     {
       desktop: heroDesktop2,
       mobile: heroMobile3,
       overlay: {
-        align: 'left',
+        align: 'center',
         className:
-          'top-[6%] left-1/2 -translate-x-1/2 w-[90%] md:top-[18%] md:left-[8%] md:translate-x-0 md:w-[44%]',
+          'top-[3%] left-1/2 -translate-x-1/2 w-[90%] md:top-[18%] md:left-[8%] md:translate-x-0 md:w-[44%]',
       },
     },
-    // {
-    //   desktop: heroDesktop4,
-    //   mobile: heroMobile4,
-    //   overlay: {
-    //     align: 'center',
-    //     className:
-    //       'top-[6%] left-1/2 -translate-x-1/2 w-[90%] md:top-1/2 md:-translate-y-1/2 md:left-[42%] md:translate-x-0 md:w-[52%]',
-    //   },
-    // },
   ]
 
   const [activeHero, setActiveHero] = useState(0)
   const [manifestoStats, setManifestoStats] = useState<ManifestoStats | null>(null)
-  // const [manifestoCounterActive, setManifestoCounterActive] = useState(false) // moved to the Manifesto page
 
   const signOnRef = useRef<HTMLDivElement>(null)
-  // const manifestoRef = useRef<HTMLElement>(null) // moved to the Manifesto page
   const displayedManifestoStats = manifestoStats ?? { total_signers: 0, total_countries: 0 }
 
   const loadManifestoStats = useCallback(async () => {
@@ -225,7 +168,6 @@ export default function Home() {
     }
   }, [])
 
-  // Hero auto-advance — paused while video is playing.
   useEffect(() => {
     if (isVideoMode) return
     const timer = setInterval(() => setActiveHero(prev => (prev + 1) % heroSlides.length), 6000)
@@ -234,43 +176,9 @@ export default function Home() {
 
   useEffect(() => { loadManifestoStats() }, [loadManifestoStats])
 
-  // Manifesto signer-counter observer moved to the Manifesto page.
-  /*
-  useEffect(() => {
-    if (!manifestoRef.current || manifestoCounterActive) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setManifestoCounterActive(true)
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.18 },
-    )
-    observer.observe(manifestoRef.current)
-    return () => observer.disconnect()
-  }, [manifestoCounterActive])
-  */
-
-  // Auto-scroll to manifesto on first mount per page load.
-  // Module-level flag resets on hard refresh but persists across SPA route changes.
-  // Disabled — manifesto auto-scroll removed.
-  // useEffect(() => {
-  //   if (manifestoAutoScrolled) return
-  //   manifestoAutoScrolled = true
-  //   const timer = setTimeout(() => {
-  //     manifestoRef.current?.scrollIntoView({ behavior: 'smooth' })
-  //   }, 2000)
-  //   return () => clearTimeout(timer)
-  // }, [])
-
   const scrollToSignOn = () => signOnRef.current?.scrollIntoView({ behavior: 'smooth' })
 
-  // Routed here with intent to write a story (the "Write your story" CTA on
-  // /welcome)? Scroll straight to the sign-on form below.
   const wantsSignOn = (location.state as { scrollTo?: string } | null)?.scrollTo === 'signOn'
-  // Manifesto auto-scroll disabled, so no suppression needed here.
-  // if (wantsSignOn) manifestoAutoScrolled = true
 
   useEffect(() => {
     if (!wantsSignOn) return
@@ -279,11 +187,6 @@ export default function Home() {
     }, 100)
     return () => clearTimeout(timer)
   }, [wantsSignOn])
-
-  // Used by the commented-out "Add Your Wave." sign form.
-  // const handleSignSuccess = (_id: string, _name: string) => {
-  //   loadManifestoStats()
-  // }
 
   return (
     <div className="min-h-screen bg-white">
@@ -316,13 +219,6 @@ export default function Home() {
         </div>
 
         {/* ── Video layer ── */}
-        {/*
-          Single source — same file for desktop and mobile (no separate mobile
-          versions). The video is always mounted for background buffering but
-          invisible until the user clicks Play.
-          playsInline is required for iOS Safari inline playback.
-          muted is set as HTML attribute AND synced via ref for mobile autoplay policy.
-        */}
         <div className={`absolute inset-0 z-20 transition-opacity duration-700 ${isVideoMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <video
             ref={videoRef}
@@ -377,63 +273,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Sign the Manifesto — moved to the Manifesto page (/manifesto). ── */}
-      {/*
-      <section ref={manifestoRef} className="relative bg-white py-20 md:py-32 px-6 overflow-hidden">
-        <div className="max-w-3xl mx-auto relative z-10">
-          <h2 className="-mt-10 text-4xl md:text-6xl font-black uppercase tracking-tight text-center mb-8">{t('home.manifestoTitle')}</h2>
-          {manifestoStats && (
-            <p className="-mt-4 mb-10 text-center font-mono text-sm md:text-base text-[#0C0C0A]/70">
-              <AnimatedManifestoNumber value={manifestoStats.total_signers} active={manifestoCounterActive} />{' '}
-              {t('home.manifestoStatsUsersSuffix')}{' '}
-              <AnimatedManifestoNumber value={manifestoStats.total_countries} active={manifestoCounterActive} />{' '}
-              {t('home.manifestoStatsCountriesSuffix')}
-            </p>
-          )}
-          <div className="text-lg md:text-xl leading-relaxed">
-            <div className="relative pl-6 my-12 py-6">
-              <div className="absolute left-0 top-0 bottom-0 w-1 flex flex-col">
-                <div className="flex-1 bg-[#DD3935]" />
-                <div className="flex-1 bg-[#EBBD06]" />
-                <div className="flex-1 bg-[#027A4F]" />
-              </div>
-              <div className="space-y-6 text-xl md:text-2xl font-bold leading-relaxed">
-                <p>{t('home.manifestoP1Line1')}<br />{t('home.manifestoP1Line2')}</p>
-                <p>{t('home.manifestoP2')}</p>
-                <p>{t('home.manifestoP3Line1')}<br />{t('home.manifestoP3Line2')}</p>
-                <p>
-                  {t('home.manifestoP4')}
-                  <span className="font-custard normal-case">#NotWaiting</span>
-                </p>
-              </div>
-            </div>
-            <div className="relative pl-6 my-12 py-6">
-              <div className="absolute left-0 top-0 bottom-0 w-1 flex flex-col">
-                <div className="flex-1 bg-[#DD3935]" />
-                <div className="flex-1 bg-[#EBBD06]" />
-                <div className="flex-1 bg-[#027A4F]" />
-              </div>
-              <ManifestoInlineForm />
-            </div>
-          </div>
-          <div className="text-center mt-20">
-            <p onClick={scrollToSignOn} className="text-xl md:text-2xl font-black uppercase text-[#DD3935] cursor-pointer hover:underline underline-offset-4 inline">
-              {t('home.readyToJoin')}
-            </p>
-            <p className="mt-4 text-base md:text-lg text-[#0C0C0A]/70 max-w-2xl mx-auto leading-relaxed">
-              {t('home.waveExplainer')}
-            </p>
-          </div>
-        </div>
-      </section>
-      */}
-
-      {/* ── Sign form ─── */}
-      {/* "Add Your Wave." section — commented out. */}
-      {/* <ManifestoSignForm ref={signOnRef} onSuccess={handleSignSuccess} /> */}
-
-
-      {/* ── Wave mark teaser ───────────────────────────────────────────────── */}
+      {/* ── Wave mark teaser ──────────────────────────────────────────────── */}
       <section className="bg-[#EBBD06] text-[#0C0C0A] py-20 md:py-32 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-start">
@@ -465,8 +305,7 @@ export default function Home() {
         </div>
       </section>
 
-
-   {/* ── Sign the Manifesto CTA ─── */}
+      {/* ── Sign the Manifesto CTA ─── */}
       <section className="bg-white py-16 md:py-24 px-6">
         <div className="max-w-3xl mx-auto flex justify-center">
           <Button onClick={() => navigate('/manifesto')} className="text-base md:text-lg px-10 py-5">
@@ -475,7 +314,6 @@ export default function Home() {
         </div>
       </section>
 
-
       {/* ── Stats section ─── */}
       <StatsSection
         onJoinClick={scrollToSignOn}
@@ -483,11 +321,7 @@ export default function Home() {
         onRefresh={loadManifestoStats}
       />
 
-      {/* ── Stories slider ─── */}
-      {/* "Waves from the community" section — commented out. */}
-      {/* <StoriesSlider /> */}
-
-      {/* ── Protocol ───────────────────────────────────────────────────────── */}
+      {/* ── Protocol ──────────────────────────────────────────────────────────── */}
       <section className="bg-[#F5F5F5] py-28 px-6">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-12 text-center">{t('home.protocolTitle')}</h2>

@@ -54,8 +54,8 @@ export function Navigation() {
     { path: '/', label: t('nav.home') },
     { path: '/about', label: t('nav.about') },
     { path: '/manifesto', label: t('nav.manifesto') },
-    // { path: '/stories', label: t('nav.stories') }, // link commented out
     { path: '/partners', label: t('nav.partners') },
+    { path: '/gallery', label: t('nav.gallery') },
     { path: '/contact', label: t('nav.contact') }
   ];
 
